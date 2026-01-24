@@ -25,8 +25,9 @@ unit_context: ContextVar[str] = ContextVar("unit_context", default=DEFAULT_SYSTE
 
 # Request-scoped cache for unit conversions (avoids redundant Pint computations)
 # Key: (value, dimension, system, direction), Value: converted float
-_request_cache: ContextVar[dict[tuple[float, str, str, str], float]] = ContextVar(
-    "_request_cache", default={}
+# Default is None to avoid shared mutable default issues (lazy init)
+_request_cache: ContextVar[dict[tuple[float, str, str, str], float] | None] = (
+    ContextVar("_request_cache", default=None)
 )
 
 
@@ -93,15 +94,22 @@ def reset_unit_system(token: Token[str]) -> None:
 def get_request_cache() -> dict[tuple[float, str, str, str], float]:
     """Get the current request-scoped conversion cache.
 
+    If the cache hasn't been initialized for this context, explicitly
+    initialize it with a new dictionary to avoid shared state issues.
+
     Returns:
         The cache dictionary for the current request context.
     """
-    return _request_cache.get()
+    cache = _request_cache.get()
+    if cache is None:
+        cache = {}
+        _request_cache.set(cache)
+    return cache
 
 
 def set_request_cache(
     cache: dict[tuple[float, str, str, str], float],
-) -> Token[dict[tuple[float, str, str, str], float]]:
+) -> Token[dict[tuple[float, str, str, str], float] | None]:
     """Set a new request-scoped cache.
 
     Args:
