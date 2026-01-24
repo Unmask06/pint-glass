@@ -24,6 +24,7 @@ These tests verify that:
 
 import asyncio
 import warnings
+from typing import TypeAlias
 
 import pytest
 from pydantic import BaseModel
@@ -154,7 +155,7 @@ class TestRequestScopedCache:
             token = set_unit_system("imperial")
 
             try:
-                LengthInput = PintGlass("length", "Input")
+                LengthInput: TypeAlias = PintGlass("length", "Input")
 
                 class TestModel(BaseModel):
                     length: LengthInput
@@ -185,7 +186,7 @@ class TestRequestScopedCache:
         token1 = set_unit_system("imperial")
 
         try:
-            PressureInput = PintGlass("pressure", "Input")
+            PressureInput: TypeAlias = PintGlass("pressure", "Input")
 
             class Model1(BaseModel):
                 pressure: PressureInput
@@ -275,7 +276,7 @@ class TestAsyncConcurrency:
     async def test_concurrent_model_validation(self) -> None:
         """Concurrent model validation with different systems."""
 
-        LengthInput = PintGlass("length", "Input")
+        LengthInput: TypeAlias = PintGlass("length", "Input")
 
         class PipeData(BaseModel):
             length: LengthInput
@@ -386,8 +387,8 @@ class TestAsyncConcurrency:
             token = set_unit_system("imperial" if task_id.startswith("a") else "si")
 
             try:
-                PressureInput = PintGlass("pressure", "Input")
-                LengthInput = PintGlass("length", "Input")
+                PressureInput: TypeAlias = PintGlass("pressure", "Input")
+                LengthInput: TypeAlias = PintGlass("length", "Input")
 
                 class TestModel(BaseModel):
                     pressure: PressureInput

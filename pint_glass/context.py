@@ -121,8 +121,11 @@ def set_request_cache(
     return _request_cache.set(cache)
 
 
-def clear_request_cache() -> Token[dict[tuple[float, str, str, str], float]]:
-    """Clear the request-scoped cache by setting a fresh empty dict.
+def clear_request_cache() -> Token[dict[tuple[float, str, str, str], float] | None]:
+    """Clear the request-scoped cache by resetting it to None.
+
+    This forces a fresh dictionary to be created (lazily) on the next
+    call to get_request_cache().
 
     Returns:
         A token that can be used to reset the cache to its previous value.
@@ -130,4 +133,4 @@ def clear_request_cache() -> Token[dict[tuple[float, str, str, str], float]]:
     Note:
         Call this at the start of each request to ensure isolation.
     """
-    return _request_cache.set({})
+    return _request_cache.set(None)
