@@ -7,9 +7,28 @@ corresponding units in Imperial and SI systems.
 
 from __future__ import annotations
 
+from typing import TypedDict
+
+
+class UnitMapping(TypedDict):
+    """Type definition for unit system mappings.
+
+    Attributes:
+        imperial: Unit string for Imperial system.
+        si: Unit string for International System of Units.
+        cgs: Unit string for Centimeter-Gram-Second system.
+        us: Unit string for US Customary system.
+    """
+
+    imperial: str
+    si: str
+    cgs: str
+    us: str
+
+
 # Mapping of dimension keys to their units in each system
 # Format: dimension -> {system -> unit_string}
-TARGET_DIMENSIONS: dict[str, dict[str, str]] = {
+TARGET_DIMENSIONS: dict[str, UnitMapping] = {
     "pressure": {
         "imperial": "psi",
         "si": "pascal",

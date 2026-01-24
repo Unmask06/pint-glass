@@ -31,6 +31,11 @@ from pint_glass.core import (
     ureg,
 )
 from pint_glass.dimensions import TARGET_DIMENSIONS
+from pint_glass.exceptions import (
+    PintGlassError,
+    UnitConversionError,
+    UnsupportedDimensionError,
+)
 from pint_glass.fields import ModelType, PintGlass
 
 __version__ = "0.1.0"
@@ -56,4 +61,8 @@ __all__ = [
     "unit_context",
     # Core utilities
     "ureg",
+    # Exceptions
+    "PintGlassError",
+    "UnitConversionError",
+    "UnsupportedDimensionError",
 ]

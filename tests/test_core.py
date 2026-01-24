@@ -10,6 +10,7 @@ from pint_glass.core import (
     ureg,
 )
 from pint_glass.dimensions import TARGET_DIMENSIONS
+from pint_glass.exceptions import UnitConversionError, UnsupportedDimensionError
 
 
 class TestTargetDimensions:
@@ -60,8 +61,10 @@ class TestGetPreferredUnit:
         assert get_preferred_unit("pressure", "SI") == "pascal"
 
     def test_unknown_dimension_raises(self) -> None:
-        """Unknown dimension should raise KeyError."""
-        with pytest.raises(KeyError, match="Unknown dimension"):
+        """Unknown dimension should raise UnsupportedDimensionError."""
+        with pytest.raises(
+            UnsupportedDimensionError, match="Unsupported dimension 'unknown'"
+        ):
             get_preferred_unit("unknown", "imperial")
 
     def test_unknown_system_falls_back_to_imperial(self) -> None:
@@ -116,6 +119,21 @@ class TestConvertToBase:
         """SI input should remain unchanged."""
         result = convert_to_base(100, "pressure", "si")
         assert result == 100.0
+
+    def test_invalid_conversion_raises(self) -> None:
+        """Should raise UnitConversionError for invalid conversions."""
+        from unittest.mock import patch
+
+        import pint
+
+        # Mock the Quantity.to method to raise a DimensionalityError
+        with patch.object(
+            pint.Quantity,
+            "to",
+            side_effect=pint.DimensionalityError("meter", "second"),
+        ):
+            with pytest.raises(UnitConversionError, match="Conversion failed"):
+                convert_to_base(100, "pressure", "imperial")
 
 
 class TestConvertFromBase:

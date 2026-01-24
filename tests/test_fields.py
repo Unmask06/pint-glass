@@ -509,6 +509,17 @@ class TestValidation:
         finally:
             unit_context.reset(token)
 
+    def test_unsupported_dimension_error_message(self) -> None:
+        """Should provide friendly error message for unsupported dimensions."""
+
+        class TestModel(BaseModel):
+            value: PintGlass("unknown_dim", "Input")
+
+        with pytest.raises(
+            ValidationError, match="Unsupported dimension 'unknown_dim'"
+        ):
+            TestModel(value=100)
+
 
 class TestJSONSerialization:
     """Tests for JSON serialization."""
