@@ -511,20 +511,14 @@ class TestValidation:
 
     def test_unsupported_dimension_error_message(self) -> None:
         """Should provide friendly error message for unsupported dimensions."""
-        # Note: This is usually caught at type definition time if dimension is passed to PintGlass()
-        # but the validator itself also has the check.
-        try:
 
-            class TestModel(BaseModel):
-                value: PintGlass("unknown_dim", "Input")
+        class TestModel(BaseModel):
+            value: PintGlass("unknown_dim", "Input")
 
-            with pytest.raises(
-                ValidationError, match="Unsupported dimension 'unknown_dim'"
-            ):
-                TestModel(value=100)
-        except Exception as e:
-            # If it fails at class definition time (which it should if it's a factory)
-            assert "Unsupported dimension 'unknown_dim'" in str(e)
+        with pytest.raises(
+            ValidationError, match="Unsupported dimension 'unknown_dim'"
+        ):
+            TestModel(value=100)
 
 
 class TestJSONSerialization:

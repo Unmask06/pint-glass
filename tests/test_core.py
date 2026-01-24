@@ -10,7 +10,7 @@ from pint_glass.core import (
     ureg,
 )
 from pint_glass.dimensions import TARGET_DIMENSIONS
-from pint_glass.exceptions import UnsupportedDimensionError
+from pint_glass.exceptions import UnitConversionError, UnsupportedDimensionError
 
 
 class TestTargetDimensions:
@@ -122,12 +122,18 @@ class TestConvertToBase:
 
     def test_invalid_conversion_raises(self) -> None:
         """Should raise UnitConversionError for invalid conversions."""
-        # Use a dimension that might have incompatible units (though our table is safe)
-        # We can mock or force an error if we had more flexibility, but for now
-        # let's assume we want to test the catch block.
-        # Since PintGlass core use TARGET_DIMENSIONS, it's hard to trigger DimensionalityError
-        # without changing the mapping.
-        pass
+        from unittest.mock import patch
+
+        import pint
+
+        # Mock the Quantity.to method to raise a DimensionalityError
+        with patch.object(
+            pint.Quantity,
+            "to",
+            side_effect=pint.DimensionalityError("meter", "second"),
+        ):
+            with pytest.raises(UnitConversionError, match="Conversion failed"):
+                convert_to_base(100, "pressure", "imperial")
 
 
 class TestConvertFromBase:
