@@ -42,9 +42,9 @@ class TestTargetDimensionsStructure:
     def test_dimensions_are_strings(self) -> None:
         """All dimension keys should be strings."""
         for dimension in TARGET_DIMENSIONS.keys():
-            assert isinstance(dimension, str), (
-                f"Dimension key '{dimension}' is not a string"
-            )
+            assert isinstance(
+                dimension, str
+            ), f"Dimension key '{dimension}' is not a string"
 
     def test_unit_strings_are_strings(self) -> None:
         """All unit values should be strings."""

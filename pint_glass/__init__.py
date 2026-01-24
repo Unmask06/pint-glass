@@ -13,8 +13,13 @@ Key Features:
 """
 
 from pint_glass.context import (
+    DEFAULT_SYSTEM,
+    SUPPORTED_SYSTEMS,
+    clear_request_cache,
+    get_request_cache,
     get_unit_system,
     reset_unit_system,
+    set_request_cache,
     set_unit_system,
     unit_context,
 )
@@ -31,6 +36,8 @@ from pint_glass.fields import ModelType, PintGlass
 __version__ = "0.1.0"
 
 __all__ = [
+    "DEFAULT_SYSTEM",
+    "SUPPORTED_SYSTEMS",
     "TARGET_DIMENSIONS",
     "ModelType",
     # Primary API
@@ -40,8 +47,11 @@ __all__ = [
     "get_base_unit",
     "get_preferred_unit",
     # Context helpers
+    "clear_request_cache",
+    "get_request_cache",
     "get_unit_system",
     "reset_unit_system",
+    "set_request_cache",
     "set_unit_system",
     "unit_context",
     # Core utilities

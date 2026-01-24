@@ -88,7 +88,7 @@ class TestResetUnitSystem:
 
     def test_works_with_set_unit_system(self) -> None:
         """Should work in conjunction with set_unit_system."""
-        token = set_unit_system("custom_system")
-        assert get_unit_system() == "custom_system"
+        token = set_unit_system("si")
+        assert get_unit_system() == "si"
         reset_unit_system(token)
         assert get_unit_system() == "imperial"
