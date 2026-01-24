@@ -24,7 +24,6 @@ These tests verify that:
 
 import asyncio
 import warnings
-from typing import TypeAlias
 
 import pytest
 from pydantic import BaseModel
@@ -155,10 +154,9 @@ class TestRequestScopedCache:
             token = set_unit_system("imperial")
 
             try:
-                LengthInput: TypeAlias = PintGlass("length", "Input")
 
                 class TestModel(BaseModel):
-                    length: LengthInput
+                    length: PintGlass("length", "Input")
 
                 # First conversion - cache miss
 
@@ -186,10 +184,9 @@ class TestRequestScopedCache:
         token1 = set_unit_system("imperial")
 
         try:
-            PressureInput: TypeAlias = PintGlass("pressure", "Input")
 
             class Model1(BaseModel):
-                pressure: PressureInput
+                pressure: PintGlass("pressure", "Input")
 
             _ = Model1(pressure=100)
 
@@ -202,7 +199,7 @@ class TestRequestScopedCache:
 
         # Simulate second request with fresh cache
 
-        cache_token2 = clear_request_cache()
+        clear_request_cache()
 
         cache2 = get_request_cache()
 
@@ -223,7 +220,7 @@ class TestAsyncConcurrency:
 
             token = set_unit_system("imperial")
 
-            cache_token = clear_request_cache()
+            clear_request_cache()
 
             try:
                 await asyncio.sleep(0.01)  # Simulate some async work
@@ -238,7 +235,7 @@ class TestAsyncConcurrency:
 
             token = set_unit_system("si")
 
-            cache_token = clear_request_cache()
+            clear_request_cache()
 
             try:
                 await asyncio.sleep(0.01)  # Simulate some async work
@@ -265,9 +262,9 @@ class TestAsyncConcurrency:
 
         for request_id, system in results.items():
             if request_id.startswith("imperial"):
-                assert (
-                    system == "imperial"
-                ), f"Request {request_id} leaked: got {system}"
+                assert system == "imperial", (
+                    f"Request {request_id} leaked: got {system}"
+                )
 
             else:
                 assert system == "si", f"Request {request_id} leaked: got {system}"
@@ -276,17 +273,15 @@ class TestAsyncConcurrency:
     async def test_concurrent_model_validation(self) -> None:
         """Concurrent model validation with different systems."""
 
-        LengthInput: TypeAlias = PintGlass("length", "Input")
-
         class PipeData(BaseModel):
-            length: LengthInput
+            length: PintGlass("length", "Input")
 
         async def validate_imperial(value: float) -> float:
             """Validate with imperial."""
 
             token = set_unit_system("imperial")
 
-            cache_token = clear_request_cache()
+            clear_request_cache()
 
             try:
                 await asyncio.sleep(0.005)
@@ -303,7 +298,7 @@ class TestAsyncConcurrency:
 
             token = set_unit_system("si")
 
-            cache_token = clear_request_cache()
+            clear_request_cache()
 
             try:
                 await asyncio.sleep(0.005)
@@ -382,17 +377,15 @@ class TestAsyncConcurrency:
         cache_sizes: dict[str, int] = {}
 
         async def task_with_conversions(task_id: str) -> None:
-            cache_token = clear_request_cache()
+            clear_request_cache()
 
             token = set_unit_system("imperial" if task_id.startswith("a") else "si")
 
             try:
-                PressureInput: TypeAlias = PintGlass("pressure", "Input")
-                LengthInput: TypeAlias = PintGlass("length", "Input")
 
                 class TestModel(BaseModel):
-                    pressure: PressureInput
-                    length: LengthInput
+                    pressure: PintGlass("pressure", "Input")
+                    length: PintGlass("length", "Input")
 
                 _ = TestModel(pressure=100, length=50)
 
