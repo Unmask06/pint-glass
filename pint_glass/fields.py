@@ -18,7 +18,7 @@ from pint_glass.exceptions import UnitConversionError, UnsupportedDimensionError
 ModelType = Literal["Input", "Output"]
 
 
-def PintGlass(dimension: str, model_type: ModelType = "Input") -> Any:  # noqa: N802
+def PintGlass(dimension: str, model_type: ModelType) -> Any:  # noqa: N802
     """Create an annotated type for a Pydantic field with automatic unit conversion.
 
     This factory function returns an `Annotated[float, ...]` type that converts
@@ -30,7 +30,7 @@ def PintGlass(dimension: str, model_type: ModelType = "Input") -> Any:  # noqa: 
 
     Args:
         dimension: Physical dimension key (e.g., "pressure", "length")
-        model_type: The model type - "Input" or "Output". Defaults to "Input".
+        model_type: The model type - "Input" or "Output".
             - "Input": User sends preferred units, stored as SI
             - "Output": Stored as SI, serialized to preferred units
 

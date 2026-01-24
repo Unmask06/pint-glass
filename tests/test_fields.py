@@ -11,31 +11,17 @@ class TestPintGlassBasic:
 
     def test_creates_annotated_type(self) -> None:
         """PintGlass should create a valid type for Pydantic."""
-        pressure_type = PintGlass("pressure")
+        pressure_type = PintGlass("pressure", "Input")
         assert pressure_type is not None
 
     def test_can_be_used_in_model(self) -> None:
         """PintGlass types should work in Pydantic models."""
 
         class TestModel(BaseModel):
-            value: PintGlass("pressure")
+            value: PintGlass("pressure", "Input")
 
         model = TestModel(value=100)
         assert model.value is not None
-
-    def test_default_model_type_is_input(self) -> None:
-        """Default model_type should be 'Input'."""
-        token = set_unit_system("imperial")
-        try:
-
-            class TestModel(BaseModel):
-                pressure: PintGlass("pressure")  # Default is Input
-
-            # 14.696 psi → ~101325 Pa (converted to SI)
-            model = TestModel(pressure=14.696)
-            assert abs(model.pressure - 101325) < 100
-        finally:
-            unit_context.reset(token)
 
 
 class TestPintGlassInputModel:

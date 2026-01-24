@@ -15,9 +15,9 @@ from pydantic import BaseModel
 from pint_glass import PintGlass, unit_context, set_unit_system
 
 class EquipmentSettings(BaseModel):
-    max_pressure: PintGlass("pressure")
-    tubing_length: PintGlass("length")
-    max_temperature: PintGlass("temperature")
+    max_pressure: PintGlass("pressure", "Input")
+    tubing_length: PintGlass("length", "Input")
+    max_temperature: PintGlass("temperature", "Input")
 
 # Set unit system (default is "imperial")
 set_unit_system("imperial")
