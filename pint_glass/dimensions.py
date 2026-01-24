@@ -11,6 +11,15 @@ from typing import TypedDict
 
 
 class UnitMapping(TypedDict):
+    """Type definition for unit system mappings.
+
+    Attributes:
+        imperial: Unit string for Imperial system.
+        si: Unit string for International System of Units.
+        cgs: Unit string for Centimeter-Gram-Second system.
+        us: Unit string for US Customary system.
+    """
+
     imperial: str
     si: str
     cgs: str
