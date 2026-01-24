@@ -154,9 +154,10 @@ class TestRequestScopedCache:
             token = set_unit_system("imperial")
 
             try:
+                LengthInput = PintGlass("length", "Input")
 
                 class TestModel(BaseModel):
-                    length: PintGlass("length", "Input")
+                    length: LengthInput
 
                 # First conversion - cache miss
 
@@ -184,9 +185,10 @@ class TestRequestScopedCache:
         token1 = set_unit_system("imperial")
 
         try:
+            PressureInput = PintGlass("pressure", "Input")
 
             class Model1(BaseModel):
-                pressure: PintGlass("pressure", "Input")
+                pressure: PressureInput
 
             _ = Model1(pressure=100)
 
@@ -262,9 +264,9 @@ class TestAsyncConcurrency:
 
         for request_id, system in results.items():
             if request_id.startswith("imperial"):
-                assert system == "imperial", (
-                    f"Request {request_id} leaked: got {system}"
-                )
+                assert (
+                    system == "imperial"
+                ), f"Request {request_id} leaked: got {system}"
 
             else:
                 assert system == "si", f"Request {request_id} leaked: got {system}"
@@ -273,8 +275,10 @@ class TestAsyncConcurrency:
     async def test_concurrent_model_validation(self) -> None:
         """Concurrent model validation with different systems."""
 
+        LengthInput = PintGlass("length", "Input")
+
         class PipeData(BaseModel):
-            length: PintGlass("length", "Input")
+            length: LengthInput
 
         async def validate_imperial(value: float) -> float:
             """Validate with imperial."""
@@ -382,13 +386,14 @@ class TestAsyncConcurrency:
             token = set_unit_system("imperial" if task_id.startswith("a") else "si")
 
             try:
+                PressureInput = PintGlass("pressure", "Input")
+                LengthInput = PintGlass("length", "Input")
 
-                class Model(BaseModel):
-                    pressure: PintGlass("pressure", "Input")
+                class TestModel(BaseModel):
+                    pressure: PressureInput
+                    length: LengthInput
 
-                    length: PintGlass("length", "Input")
-
-                _ = Model(pressure=100, length=50)
+                _ = TestModel(pressure=100, length=50)
 
                 await asyncio.sleep(0.005)
 
