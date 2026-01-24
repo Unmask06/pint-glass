@@ -13,6 +13,7 @@ import pint
 
 from pint_glass.context import get_request_cache
 from pint_glass.dimensions import TARGET_DIMENSIONS
+from pint_glass.exceptions import UnitConversionError, UnsupportedDimensionError
 
 # Singleton UnitRegistry instance
 ureg: pint.UnitRegistry = pint.UnitRegistry()  # type: ignore[type-arg]
@@ -41,9 +42,9 @@ def get_preferred_unit(dimension: str, system: str) -> str:
         KeyError: If the system is not supported for this dimension.
     """
     if dimension not in TARGET_DIMENSIONS:
-        raise KeyError(
-            f"Unknown dimension '{dimension}'. "
-            f"Supported dimensions: {list(TARGET_DIMENSIONS.keys())}"
+        supported = ", ".join(f"'{d}'" for d in TARGET_DIMENSIONS.keys())
+        raise UnsupportedDimensionError(
+            f"Unsupported dimension '{dimension}'; supported: {supported}"
         )
 
     system_lower = system.lower()
@@ -99,8 +100,13 @@ def convert_to_base(value: float, dimension: str, system: str) -> float:
     target_unit = get_base_unit(dimension)
 
     # Create quantity and convert
-    quantity = ureg.Quantity(value, source_unit)
-    converted = quantity.to(target_unit)
+    try:
+        quantity = ureg.Quantity(value, source_unit)
+        converted = quantity.to(target_unit)
+    except (pint.UndefinedUnitError, pint.DimensionalityError) as e:
+        raise UnitConversionError(
+            f"Conversion failed for dimension '{dimension}' from '{source_unit}' to '{target_unit}': {e}"
+        ) from e
 
     result = float(converted.magnitude)
     cache[cache_key] = result
@@ -135,8 +141,13 @@ def convert_from_base(value: float, dimension: str, system: str) -> float:
     target_unit = get_preferred_unit(dimension, system)
 
     # Create quantity and convert
-    quantity = ureg.Quantity(value, source_unit)
-    converted = quantity.to(target_unit)
+    try:
+        quantity = ureg.Quantity(value, source_unit)
+        converted = quantity.to(target_unit)
+    except (pint.UndefinedUnitError, pint.DimensionalityError) as e:
+        raise UnitConversionError(
+            f"Conversion failed for dimension '{dimension}' from '{source_unit}' to '{target_unit}': {e}"
+        ) from e
 
     result = float(converted.magnitude)
     cache[cache_key] = result

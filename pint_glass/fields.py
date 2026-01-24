@@ -12,6 +12,7 @@ from pydantic import BeforeValidator, PlainSerializer
 
 from pint_glass.context import get_unit_system
 from pint_glass.core import convert_from_base, convert_to_base
+from pint_glass.exceptions import UnitConversionError, UnsupportedDimensionError
 
 # Type alias for model type
 ModelType = Literal["Input", "Output"]
@@ -78,12 +79,19 @@ def _create_input_type(dimension: str) -> Any:
             except (TypeError, ValueError) as e:
                 raise ValueError(f"Cannot convert {value!r} to a numeric value") from e
 
-        return convert_to_base(float(value), dimension, system)
+        try:
+            return convert_to_base(float(value), dimension, system)
+        except (UnsupportedDimensionError, UnitConversionError) as e:
+            raise ValueError(str(e)) from e
 
     def serialize_from_base(value: float) -> float:
         """PlainSerializer: Convert internal base (SI) units back to preferred units."""
         system = get_unit_system()
-        return convert_from_base(value, dimension, system)
+        try:
+            return convert_from_base(value, dimension, system)
+        except (UnsupportedDimensionError, UnitConversionError) as e:
+            # Serializers shouldn't typically fail if validation passed, but we handle it
+            raise ValueError(str(e)) from e
 
     return Annotated[
         float,
@@ -108,7 +116,10 @@ def _create_output_type(dimension: str) -> Any:
     def serialize_to_preferred(value: float) -> float:
         """PlainSerializer: Convert SI base units to preferred units for output."""
         system = get_unit_system()
-        return convert_from_base(value, dimension, system)
+        try:
+            return convert_from_base(value, dimension, system)
+        except (UnsupportedDimensionError, UnitConversionError) as e:
+            raise ValueError(str(e)) from e
 
     return Annotated[
         float,
