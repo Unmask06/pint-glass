@@ -11,6 +11,7 @@ from typing import Literal
 
 import pint
 
+from pint_glass.context import get_request_cache
 from pint_glass.dimensions import TARGET_DIMENSIONS
 
 # Singleton UnitRegistry instance
@@ -74,6 +75,7 @@ def convert_to_base(value: float, dimension: str, system: str) -> float:
     """Convert a value from the preferred unit system to the base (SI) unit.
 
     This is used during input validation to store values in a consistent format.
+    Uses request-scoped caching to avoid redundant Pint computations.
 
     Args:
         value: The numeric value in the source unit system.
@@ -87,6 +89,12 @@ def convert_to_base(value: float, dimension: str, system: str) -> float:
         >>> convert_to_base(14.7, "pressure", "imperial")
         101352.932...  # 14.7 psi in pascals
     """
+    cache_key = (value, dimension, system, "to_base")
+    cache = get_request_cache()
+
+    if cache_key in cache:
+        return cache[cache_key]
+
     source_unit = get_preferred_unit(dimension, system)
     target_unit = get_base_unit(dimension)
 
@@ -94,13 +102,16 @@ def convert_to_base(value: float, dimension: str, system: str) -> float:
     quantity = ureg.Quantity(value, source_unit)
     converted = quantity.to(target_unit)
 
-    return float(converted.magnitude)
+    result = float(converted.magnitude)
+    cache[cache_key] = result
+    return result
 
 
 def convert_from_base(value: float, dimension: str, system: str) -> float:
     """Convert a value from the base (SI) unit to the preferred unit system.
 
     This is used during serialization to return values in the user's preferred format.
+    Uses request-scoped caching to avoid redundant Pint computations.
 
     Args:
         value: The numeric value in SI base units.
@@ -114,6 +125,12 @@ def convert_from_base(value: float, dimension: str, system: str) -> float:
         >>> convert_from_base(101325, "pressure", "imperial")
         14.695...  # 101325 pascals in psi
     """
+    cache_key = (value, dimension, system, "from_base")
+    cache = get_request_cache()
+
+    if cache_key in cache:
+        return cache[cache_key]
+
     source_unit = get_base_unit(dimension)
     target_unit = get_preferred_unit(dimension, system)
 
@@ -121,4 +138,6 @@ def convert_from_base(value: float, dimension: str, system: str) -> float:
     quantity = ureg.Quantity(value, source_unit)
     converted = quantity.to(target_unit)
 
-    return float(converted.magnitude)
+    result = float(converted.magnitude)
+    cache[cache_key] = result
+    return result
