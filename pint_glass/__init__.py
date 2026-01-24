@@ -30,7 +30,7 @@ from pint_glass.core import (
     get_preferred_unit,
     ureg,
 )
-from pint_glass.dimensions import TARGET_DIMENSIONS
+from pint_glass.dimensions import TARGET_DIMENSIONS, UNIT_SYSTEMS
 from pint_glass.exceptions import (
     PintGlassError,
     UnitConversionError,
@@ -44,6 +44,7 @@ __all__ = [
     "DEFAULT_SYSTEM",
     "SUPPORTED_SYSTEMS",
     "TARGET_DIMENSIONS",
+    "UNIT_SYSTEMS",
     "ModelType",
     # Primary API
     "PintGlass",

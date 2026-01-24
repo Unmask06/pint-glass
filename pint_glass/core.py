@@ -7,8 +7,6 @@ units in different unit systems (Imperial, SI).
 
 from __future__ import annotations
 
-from typing import Literal
-
 import pint
 
 from pint_glass.context import get_request_cache
@@ -19,12 +17,8 @@ from pint_glass.exceptions import UnitConversionError, UnsupportedDimensionError
 ureg: pint.UnitRegistry = pint.UnitRegistry()  # type: ignore[type-arg]
 
 
-# Type alias for supported unit systems
-UnitSystem = Literal["imperial", "si"]
-
-
 # Base units are always SI
-BASE_SYSTEM: UnitSystem = "si"
+BASE_SYSTEM: str = "si"
 
 
 def get_preferred_unit(dimension: str, system: str) -> str:

@@ -7,7 +7,7 @@ corresponding units in Imperial and SI systems.
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import TypedDict, get_type_hints
 
 
 class UnitMapping(TypedDict):
@@ -24,6 +24,11 @@ class UnitMapping(TypedDict):
     si: str
     cgs: str
     us: str
+
+
+# Dynamically extract supported unit systems from UnitMapping keys
+# This ensures UNIT_SYSTEMS stays in sync with the TypedDict definition
+UNIT_SYSTEMS: frozenset[str] = frozenset(get_type_hints(UnitMapping).keys())
 
 
 # Mapping of dimension keys to their units in each system

@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PintGlass Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        font-family: "Inter", sans-serif;
+      }
+      body {
+        background: linear-gradient(
+          135deg,
+          #0f172a 0%,
+          #1e1b4b 50%,
+          #0f172a 100%
+        );
+        min-height: 100vh;
+      }
+      .glass {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .input-field {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.2s;
+      }
+      .input-field:focus {
+        border-color: rgba(99, 102, 241, 0.5);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+      .console-box {
+        background: #0d1117;
+        border: 1px solid #30363d;
+        font-family: "Consolas", "Monaco", monospace;
+      }
+      .fade-in {
+        animation: fadeIn 0.3s ease-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body class="text-white p-4 md:p-8">
+    <div id="app" class="max-w-6xl mx-auto">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1
+            class="text-3xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent"
+          >
+            PintGlass Demo
+          </h1>
+          <p class="text-gray-400 text-sm mt-1">
+            Context-Aware Unit Conversion for Python APIs
+          </p>
+        </div>
+
+        <!-- Unit System Selector (Top Right) -->
+        <div class="glass rounded-xl px-4 py-2">
+          <label class="text-xs text-gray-400 block mb-1">Unit System</label>
+          <select
+            v-model="unitSystem"
+            class="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
+          >
+            <option
+              v-for="sys in availableSystems"
+              :key="sys"
+              :value="sys"
+              class="bg-gray-900"
+            >
+              {{ formatSystemName(sys) }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Main Content Grid -->
+      <div class="grid lg:grid-cols-2 gap-6">
+        <!-- Left Panel: Input Form -->
+        <div class="glass rounded-2xl p-6">
+          <!-- Model Type Selector -->
+          <div class="flex gap-2 mb-6">
+            <button
+              @click="modelType = 'pump'"
+              :class="modelType === 'pump' ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-gray-700'"
+              class="flex-1 py-2 px-4 rounded-lg font-medium transition-all"
+            >
+              🔧 Pump
+            </button>
+            <button
+              @click="modelType = 'line'"
+              :class="modelType === 'line' ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-gray-700'"
+              class="flex-1 py-2 px-4 rounded-lg font-medium transition-all"
+            >
+              📏 Pipeline
+            </button>
+          </div>
+
+          <!-- Pump Input Fields -->
+          <div v-if="modelType === 'pump'" class="space-y-4 fade-in">
+            <div v-for="field in pumpFields" :key="field.key">
+              <label class="block text-sm text-gray-300 mb-1">
+                {{ field.label }}
+                <span class="text-gray-500 ml-1"
+                  >({{ getUnit(field.dimension) }})</span
+                >
+              </label>
+              <input
+                type="number"
+                v-model.number="pumpData[field.key]"
+                :placeholder="field.placeholder"
+                class="input-field w-full rounded-lg px-4 py-3 text-white focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <!-- Line Input Fields -->
+          <div v-if="modelType === 'line'" class="space-y-4 fade-in">
+            <div v-for="field in lineFields" :key="field.key">
+              <label class="block text-sm text-gray-300 mb-1">
+                {{ field.label }}
+                <span class="text-gray-500 ml-1"
+                  >({{ getUnit(field.dimension) }})</span
+                >
+              </label>
+              <input
+                type="number"
+                v-model.number="lineData[field.key]"
+                :placeholder="field.placeholder"
+                class="input-field w-full rounded-lg px-4 py-3 text-white focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button
+            @click="sendRequest"
+            :disabled="loading"
+            class="w-full mt-6 py-3 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-lg font-medium transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          >
+            <span v-if="loading">⏳ Processing...</span>
+            <span v-else>🚀 Send to PintGlass API</span>
+          </button>
+
+          <!-- Error Message -->
+          <div
+            v-if="error"
+            class="mt-4 p-4 bg-red-900/30 border border-red-500/30 rounded-lg text-red-300 text-sm fade-in"
+          >
+            {{ error }}
+          </div>
+        </div>
+
+        <!-- Right Panel: Response & Console -->
+        <div class="space-y-6">
+          <!-- Response Data -->
+          <div class="glass rounded-2xl p-6">
+            <h3 class="text-lg font-semibold text-gray-200 mb-4">
+              📤 API Response
+            </h3>
+
+            <div v-if="response" class="space-y-3 fade-in">
+              <div
+                v-for="(value, key) in response.data"
+                :key="key"
+                class="flex justify-between items-center py-2 border-b border-gray-700/50"
+              >
+                <span class="text-gray-400">{{ formatKey(key) }}</span>
+                <span class="text-green-400 font-mono"
+                  >{{ formatValue(value) }} {{ getResponseUnit(key) }}</span
+                >
+              </div>
+            </div>
+            <div v-else class="text-gray-500 text-sm italic">
+              No response yet. Send a request to see results.
+            </div>
+          </div>
+
+          <!-- Console Output -->
+          <div class="glass rounded-2xl p-6">
+            <h3 class="text-lg font-semibold text-gray-200 mb-4">
+              🖥️ Server Console
+            </h3>
+            <div class="console-box rounded-lg p-4 h-64 overflow-auto">
+              <div v-if="consoleLogs.length > 0">
+                <div
+                  v-for="(log, i) in consoleLogs"
+                  :key="i"
+                  class="text-sm leading-relaxed"
+                  :class="getLogClass(log)"
+                >
+                  {{ log }}
+                </div>
+              </div>
+              <div v-else class="text-gray-500 text-sm italic">
+                Console output will appear here after sending a request...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="mt-8 text-center text-gray-500 text-xs">
+        <p>
+          PintGlass stores values internally in SI units. The X-Unit-System
+          header controls input parsing and output serialization.
+        </p>
+        <p class="mt-1">
+          Backend: <code class="text-gray-400">http://localhost:8001</code> —
+          Run with
+          <code class="text-gray-400">uv run python fast_api_check.py</code>
+        </p>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, computed, onMounted } = Vue;
+
+      createApp({
+        setup() {
+          const unitSystem = ref("imperial");
+          const availableSystems = ref(["imperial", "si"]); // Default fallback
+          const modelType = ref("pump");
+          const loading = ref(false);
+          const error = ref(null);
+          const response = ref(null);
+          const consoleLogs = ref([]);
+
+          // Fetch available unit systems on mount
+          onMounted(async () => {
+            try {
+              const res = await fetch("http://localhost:8001/dimensions");
+              if (res.ok) {
+                const data = await res.json();
+                // Get systems from first dimension's keys
+                const firstDim = Object.keys(data.mappings)[0];
+                if (firstDim) {
+                  availableSystems.value = Object.keys(data.mappings[firstDim]);
+                }
+              }
+            } catch (e) {
+              console.log("Could not fetch dimensions, using defaults");
+            }
+          });
+
+          // Format system name for display
+          const formatSystemName = (sys) => {
+            const names = {
+              imperial: "Imperial",
+              si: "SI (Metric)",
+              cgs: "CGS",
+              us: "US Customary",
+            };
+            return names[sys] || sys.toUpperCase();
+          };
+
+          // Pump data
+          const pumpData = ref({
+            flow_rate: 100,
+            head_pressure: 50,
+            power: 10,
+            inlet_temperature: 68,
+            pipe_diameter: 4,
+          });
+
+          // Line data
+          const lineData = ref({
+            length: 1000,
+            velocity: 10,
+            pressure_drop: 15,
+            fluid_density: 62.4,
+            viscosity: 0.001,
+          });
+
+          // Field definitions with dimensions
+          const pumpFields = [
+            {
+              key: "flow_rate",
+              label: "Flow Rate",
+              dimension: "volumetric_flow_rate",
+              placeholder: "e.g., 100",
+            },
+            {
+              key: "head_pressure",
+              label: "Head Pressure",
+              dimension: "pressure",
+              placeholder: "e.g., 50",
+            },
+            {
+              key: "power",
+              label: "Power",
+              dimension: "power",
+              placeholder: "e.g., 10",
+            },
+            {
+              key: "inlet_temperature",
+              label: "Inlet Temperature",
+              dimension: "temperature",
+              placeholder: "e.g., 68",
+            },
+            {
+              key: "pipe_diameter",
+              label: "Pipe Diameter",
+              dimension: "length",
+              placeholder: "e.g., 4",
+            },
+          ];
+
+          const lineFields = [
+            {
+              key: "length",
+              label: "Pipeline Length",
+              dimension: "length",
+              placeholder: "e.g., 1000",
+            },
+            {
+              key: "velocity",
+              label: "Flow Velocity",
+              dimension: "velocity",
+              placeholder: "e.g., 10",
+            },
+            {
+              key: "pressure_drop",
+              label: "Pressure Drop",
+              dimension: "pressure",
+              placeholder: "e.g., 15",
+            },
+            {
+              key: "fluid_density",
+              label: "Fluid Density",
+              dimension: "density",
+              placeholder: "e.g., 62.4",
+            },
+            {
+              key: "viscosity",
+              label: "Viscosity",
+              dimension: "viscosity",
+              placeholder: "e.g., 0.001",
+            },
+          ];
+
+          // Unit mappings
+          const unitMappings = {
+            imperial: {
+              volumetric_flow_rate: "ft³/s",
+              pressure: "psi",
+              power: "ft·lb/s",
+              temperature: "°F",
+              length: "ft",
+              velocity: "ft/s",
+              density: "lb/ft³",
+              viscosity: "lb/(ft·s)",
+            },
+            si: {
+              volumetric_flow_rate: "m³/s",
+              pressure: "Pa",
+              power: "W",
+              temperature: "°C",
+              length: "m",
+              velocity: "m/s",
+              density: "kg/m³",
+              viscosity: "Pa·s",
+            },
+            cgs: {
+              volumetric_flow_rate: "cm³/s",
+              pressure: "barye",
+              power: "erg/s",
+              temperature: "°C",
+              length: "cm",
+              velocity: "cm/s",
+              density: "g/cm³",
+              viscosity: "poise",
+            },
+            us: {
+              volumetric_flow_rate: "ft³/s",
+              pressure: "psi",
+              power: "ft·lb/s",
+              temperature: "°F",
+              length: "ft",
+              velocity: "ft/s",
+              density: "lb/ft³",
+              viscosity: "lb/(ft·s)",
+            },
+          };
+
+          // Get unit for a dimension
+          const getUnit = (dimension) => {
+            return unitMappings[unitSystem.value][dimension] || dimension;
+          };
+
+          // Get unit for response field
+          const getResponseUnit = (key) => {
+            const allFields = [...pumpFields, ...lineFields];
+            const field = allFields.find((f) => f.key === key);
+            return field ? getUnit(field.dimension) : "";
+          };
+
+          // Format field key for display
+          const formatKey = (key) => {
+            return key
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (l) => l.toUpperCase());
+          };
+
+          // Format value
+          const formatValue = (value) => {
+            if (typeof value === "number") {
+              return value.toFixed(4);
+            }
+            return value;
+          };
+
+          // Get log styling class
+          const getLogClass = (log) => {
+            if (log.includes("[Middleware]")) return "text-yellow-400";
+            if (log.includes("[Endpoint")) return "text-cyan-400";
+            if (log.includes("[Processing]")) return "text-purple-400";
+            if (log.includes("[Response]")) return "text-green-400";
+            return "text-gray-300";
+          };
+
+          // Send request
+          const sendRequest = async () => {
+            loading.value = true;
+            error.value = null;
+            response.value = null;
+            consoleLogs.value = [];
+
+            const endpoint = modelType.value === "pump" ? "/pump" : "/line";
+            const data =
+              modelType.value === "pump" ? pumpData.value : lineData.value;
+
+            try {
+              const res = await fetch(`http://localhost:8001${endpoint}`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Unit-System": unitSystem.value,
+                },
+                body: JSON.stringify(data),
+              });
+
+              if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.detail || `HTTP ${res.status}`);
+              }
+
+              const result = await res.json();
+              response.value = result;
+              consoleLogs.value = result.console || [];
+            } catch (e) {
+              error.value = `Connection failed: ${e.message}. Is the backend running? (uv run python fast_api_check.py)`;
+              console.error(e);
+            } finally {
+              loading.value = false;
+            }
+          };
+
+          return {
+            unitSystem,
+            availableSystems,
+            formatSystemName,
+            modelType,
+            loading,
+            error,
+            response,
+            consoleLogs,
+            pumpData,
+            lineData,
+            pumpFields,
+            lineFields,
+            getUnit,
+            getResponseUnit,
+            formatKey,
+            formatValue,
+            getLogClass,
+            sendRequest,
+          };
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>

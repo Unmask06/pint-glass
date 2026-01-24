@@ -8,13 +8,11 @@ from __future__ import annotations
 
 import warnings
 from contextvars import ContextVar, Token
-from typing import Literal
 
-# Type alias for unit systems
-UnitSystem = Literal["imperial", "si"]
+from pint_glass.dimensions import UNIT_SYSTEMS
 
-# Supported unit systems - used for validation and warnings
-SUPPORTED_SYSTEMS: frozenset[str] = frozenset({"imperial", "si"})
+# Re-export for backward compatibility
+SUPPORTED_SYSTEMS: frozenset[str] = UNIT_SYSTEMS
 
 # Default unit system (can be configured at app startup)
 DEFAULT_SYSTEM: str = "imperial"
