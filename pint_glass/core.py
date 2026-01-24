@@ -11,6 +11,8 @@ from typing import Literal
 
 import pint
 
+from pint_glass.dimensions import TARGET_DIMENSIONS
+
 # Singleton UnitRegistry instance
 ureg: pint.UnitRegistry = pint.UnitRegistry()  # type: ignore[type-arg]
 
@@ -18,31 +20,6 @@ ureg: pint.UnitRegistry = pint.UnitRegistry()  # type: ignore[type-arg]
 # Type alias for supported unit systems
 UnitSystem = Literal["imperial", "si"]
 
-
-# Mapping of dimension keys to their units in each system
-# Format: dimension -> {system -> unit_string}
-TARGET_DIMENSIONS: dict[str, dict[str, str]] = {
-    "pressure": {
-        "imperial": "psi",
-        "si": "pascal",
-    },
-    "length": {
-        "imperial": "foot",
-        "si": "meter",
-    },
-    "temperature": {
-        "imperial": "degF",
-        "si": "degC",
-    },
-    "mass": {
-        "imperial": "pound",
-        "si": "kilogram",
-    },
-    "time": {
-        "imperial": "second",
-        "si": "second",
-    },
-}
 
 # Base units are always SI
 BASE_SYSTEM: UnitSystem = "si"

@@ -19,13 +19,13 @@ from pint_glass.context import (
     unit_context,
 )
 from pint_glass.core import (
-    TARGET_DIMENSIONS,
     convert_from_base,
     convert_to_base,
     get_base_unit,
     get_preferred_unit,
     ureg,
 )
+from pint_glass.dimensions import TARGET_DIMENSIONS
 from pint_glass.fields import ModelType, PintGlass
 
 __version__ = "0.1.0"

@@ -3,13 +3,13 @@
 import pytest
 
 from pint_glass.core import (
-    TARGET_DIMENSIONS,
     convert_from_base,
     convert_to_base,
     get_base_unit,
     get_preferred_unit,
     ureg,
 )
+from pint_glass.dimensions import TARGET_DIMENSIONS
 
 
 class TestTargetDimensions:
