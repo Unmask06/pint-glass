@@ -59,7 +59,7 @@ BASE_SYSTEM: str = "si"
 
 # Mapping of dimension keys to their units in each system
 # Format: dimension -> {system -> unit_string}
-TARGET_DIMENSIONS: dict[str, UnitMapping] = {
+_TARGET_DIMENSIONS_RAW: dict[str, UnitMapping] = {
     "pressure": {
         "imperial": "psi",
         "si": "pascal",
@@ -78,7 +78,7 @@ TARGET_DIMENSIONS: dict[str, UnitMapping] = {
     },
     "temperature": {
         "imperial": "degF",
-        "si": "degC",
+        "si": "kelvin",
         "cgs": "degC",
         "us": "degF",
         "engg_si": "degC",
@@ -261,3 +261,42 @@ TARGET_DIMENSIONS: dict[str, UnitMapping] = {
         "engg_field": "square_foot / second",
     },
 }
+
+
+def get_pretty_dimensions() -> dict[str, dict[str, str]]:
+    """Get a pretty-formatted version of TARGET_DIMENSIONS.
+
+    Returns:
+        A dictionary with the same structure as TARGET_DIMENSIONS, but with:
+        - Keys converted to Title Case (e.g., "mass_flow_rate" -> "Mass Flow Rate")
+        - Unit strings formatted to be human-readable (e.g., "m**2" -> "m²")
+    """
+    import pint
+
+    # Create a local registry to avoid side effects or circular imports
+    ureg = pint.UnitRegistry()
+
+    pretty_dims = {}
+    for dim_key, unit_map in _TARGET_DIMENSIONS_RAW.items():
+        # Convert key: "mass_flow_rate" -> "Mass Flow Rate"
+        pretty_key = dim_key.replace("_", " ").title()
+
+        pretty_map = {}
+        # Iterate over the UnitMapping (typed dict behaves like dict at runtime)
+        for system, unit_str in unit_map.items():
+            try:
+                # Create a Unit object and format it
+                # ~P: Short Pretty format (e.g., km/h, m², etc.)
+                unit_obj = ureg.Unit(unit_str)
+                pretty_unit = format(unit_obj, "~P")
+                pretty_map[system] = pretty_unit
+            except Exception:
+                # If pint fails to parse or format, keep original string
+                pretty_map[system] = unit_str
+        
+        pretty_dims[pretty_key] = pretty_map
+
+    return pretty_dims
+
+
+TARGET_DIMENSIONS: dict[str, dict[str, str]] = get_pretty_dimensions()

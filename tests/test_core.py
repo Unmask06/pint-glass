@@ -24,7 +24,7 @@ class TestTargetDimensions:
 
     def test_expected_dimensions_exist(self) -> None:
         """Core dimensions should be defined."""
-        expected = ["pressure", "length", "temperature", "mass", "time"]
+        expected = ["Pressure", "Length", "Temperature", "Mass", "Time"]
         for dim in expected:
             assert dim in TARGET_DIMENSIONS, f"Missing dimension: {dim}"
 
@@ -40,7 +40,7 @@ class TestGetPreferredUnit:
             ("length", "imperial", "foot"),
             ("length", "si", "meter"),
             ("temperature", "imperial", "degF"),
-            ("temperature", "si", "degC"),
+            ("temperature", "si", "kelvin"),
             ("mass", "imperial", "pound"),
             ("mass", "si", "kilogram"),
             ("time", "imperial", "second"),
@@ -70,8 +70,8 @@ class TestGetPreferredUnit:
     def test_unknown_system_falls_back_to_default(self) -> None:
         """Unknown system should fall back to default."""
         result = get_preferred_unit("pressure", "unknown_system")
-        expected = TARGET_DIMENSIONS["pressure"][DEFAULT_SYSTEM]
-        assert result == expected
+        # Default system is engg_si, so pressure -> bar
+        assert result == "bar"
 
 
 class TestGetBaseUnit:
@@ -82,7 +82,7 @@ class TestGetBaseUnit:
         [
             ("pressure", "pascal"),
             ("length", "meter"),
-            ("temperature", "degC"),
+            ("temperature", "kelvin"),
             ("mass", "kilogram"),
             ("time", "second"),
         ],
@@ -106,15 +106,15 @@ class TestConvertToBase:
         result = convert_to_base(1, "length", "imperial")
         assert abs(result - 0.3048) < 0.0001
 
-    def test_fahrenheit_to_celsius(self) -> None:
-        """212°F should be 100°C (boiling point)."""
+    def test_fahrenheit_to_kelvin(self) -> None:
+        """212°F should be 373.15 K (boiling point)."""
         result = convert_to_base(212, "temperature", "imperial")
-        assert abs(result - 100) < 0.1
+        assert abs(result - 373.15) < 0.1
 
-    def test_32f_to_0c(self) -> None:
-        """32°F should be 0°C (freezing point)."""
+    def test_32f_to_kelvin(self) -> None:
+        """32°F should be 273.15 K (freezing point)."""
         result = convert_to_base(32, "temperature", "imperial")
-        assert abs(result - 0) < 0.1
+        assert abs(result - 273.15) < 0.1
 
     def test_si_to_si_no_change(self) -> None:
         """SI input should remain unchanged."""
@@ -150,14 +150,14 @@ class TestConvertFromBase:
         result = convert_from_base(1, "length", "imperial")
         assert abs(result - 3.28084) < 0.001
 
-    def test_celsius_to_fahrenheit(self) -> None:
-        """100°C should be 212°F."""
-        result = convert_from_base(100, "temperature", "imperial")
+    def test_kelvin_to_fahrenheit(self) -> None:
+        """373.15 K should be 212°F."""
+        result = convert_from_base(373.15, "temperature", "imperial")
         assert abs(result - 212) < 0.1
 
-    def test_0c_to_32f(self) -> None:
-        """0°C should be 32°F."""
-        result = convert_from_base(0, "temperature", "imperial")
+    def test_kelvin_to_32f(self) -> None:
+        """273.15 K should be 32°F."""
+        result = convert_from_base(273.15, "temperature", "imperial")
         assert abs(result - 32) < 0.1
 
     def test_si_to_si_no_change(self) -> None:
