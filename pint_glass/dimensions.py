@@ -271,6 +271,7 @@ def get_pretty_dimensions() -> dict[str, dict[str, str]]:
         - Keys converted to Title Case (e.g., "mass_flow_rate" -> "Mass Flow Rate")
         - Unit strings formatted to be human-readable (e.g., "m**2" -> "m²")
     """
+    import warnings
     import pint
 
     # Create a local registry to avoid side effects or circular imports
@@ -290,8 +291,14 @@ def get_pretty_dimensions() -> dict[str, dict[str, str]]:
                 unit_obj = ureg.Unit(unit_str)
                 pretty_unit = format(unit_obj, "~P")
                 pretty_map[system] = pretty_unit
-            except Exception:
-                # If pint fails to parse or format, keep original string
+            except pint.PintError as e:
+                # If pint fails to parse or format, keep original string and warn
+                warnings.warn(
+                    f"Failed to format unit '{unit_str}' for dimension '{dim_key}' "
+                    f"in system '{system}': {e}",
+                    UserWarning,
+                    stacklevel=2,
+                )
                 pretty_map[system] = unit_str
         
         pretty_dims[pretty_key] = pretty_map

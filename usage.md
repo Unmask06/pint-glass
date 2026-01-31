@@ -11,6 +11,7 @@ A comprehensive guide for using PintGlass — the seamless Pydantic + Pint integ
 - [Supported Dimensions](#supported-dimensions)
 - [Unit Systems](#unit-systems)
 - [Advanced Usage](#advanced-usage)
+- [Request-Scoped Caching](#request-scoped-caching)
 - [Error Handling](#error-handling)
 - [API Reference](#api-reference)
 - [Best Practices](#best-practices)
@@ -62,7 +63,7 @@ class TankSpecification(BaseModel):
     pressure: PintGlass("pressure", "Input")       # bar ↔ pascals
     height: PintGlass("length", "Input")           # meters ↔ meters
     capacity: PintGlass("volume", "Input")         # cubic meters ↔ cubic meters
-    max_temperature: PintGlass("temperature", "Input")  # °C ↔ °C
+    max_temperature: PintGlass("temperature", "Input")  # °C ↔ Kelvin
 
 
 # Set the unit system context (default is engg_si)
@@ -73,7 +74,7 @@ tank = TankSpecification(
     pressure=10,         # 10 bar → stored as 1,000,000 Pa
     height=3,            # 3 m → stored as 3 m
     capacity=14,         # 14 m³ → stored as 14 m³
-    max_temperature=93   # 93°C → stored as 93°C
+    max_temperature=100  # 100°C → stored as 373.15 K
 )
 
 # Access internal values (always SI)
@@ -82,7 +83,7 @@ print(f"Internal height: {tank.height} m")
 
 # Serialize back to user-preferred units
 print(tank.model_dump())
-# Output: {'pressure': 10.0, 'height': 3.0, 'capacity': 14.0, 'max_temperature': 93.0}
+# Output: {'pressure': 10.0, 'height': 3.0, 'capacity': 14.0, 'max_temperature': 100.0}
 ```
 
 ### Input vs Output Models
@@ -189,46 +190,19 @@ curl -X POST "http://localhost:8000/pumps/calculate" \
 # Response: {"flow_rate": 100.0, "head_pressure": 50.0, "status": "calculated"}
 ```
 
-### Dependency Injection Alternative
-
-```python
-from typing import Annotated
-from fastapi import FastAPI, Header, Depends
-from pint_glass import set_unit_system, reset_unit_system
-
-app = FastAPI()
-
-
-async def get_unit_system(x_unit_system: Annotated[str | None, Header()] = None):
-    """Dependency to manage unit system context."""
-    system = (x_unit_system or "engg_si").lower()
-    token = set_unit_system(system)
-    try:
-        yield system
-    finally:
-        reset_unit_system(token)
-
-
-@app.post("/items")
-async def create_item(
-    item: ItemRequest,
-    unit_system: str = Depends(get_unit_system)
-):
-    # unit_system is now set in context
-    return {"received_system": unit_system, "data": item.model_dump()}
-```
-
 ---
 
 ## Supported Dimensions
 
-PintGlass supports multiple engineering and standard unit systems:
+PintGlass supports multiple engineering and standard unit systems.
 
-| Dimension              | Engg SI (default) | Engg Field          | Imperial Unit       | SI Unit               |
+**Note on Temperature:** The SI base unit for temperature is **Kelvin (K)**. Engineering systems like `engg_si` and `engg_field` use °C and °F respectively, which are converted to/from Kelvin internally.
+
+| Dimension              | Engg SI (default) | Engg Field          | Imperial Unit       | SI Unit (Base)        |
 | ---------------------- | ----------------- | ------------------- | ------------------- | --------------------- |
 | `pressure`             | bar               | psi                 | psi                 | pascal                |
 | `length`               | meter             | foot                | foot                | meter                 |
-| `temperature`          | degC              | degF                | degF                | degC                  |
+| `temperature`          | degC              | degF                | degF                | **Kelvin**            |
 | `mass_flow_rate`       | kg/hr             | lb/hr               | lb/s                | kg/s                  |
 | `volumetric_flow_rate` | m³/hr             | ft³/hr              | ft³/s               | m³/s                  |
 | `mass`                 | kilogram          | pound               | pound               | kilogram              |
@@ -309,23 +283,93 @@ print(f"3600 m3/hr = {flow_m3s:.2f} m3/s")  # 1.00 m3/s
 
 ---
 
+## Request-Scoped Caching
+
+PintGlass uses `contextvars` to cache `pint.Quantity` conversions *per request*. This significantly improves performance when converting the same dimension multiple times within a single request context.
+
+### Managing the Cache
+
+Typically, you don't need to manage this manually if you use `set_unit_system()` / `reset_unit_system()`. However, you can inspect or clear it explicitly:
+
+```python
+from pint_glass import get_request_cache, clear_request_cache
+
+# Get current cache contents
+cache = get_request_cache()
+print(len(cache))
+
+# Clear cache manually (e.g., if re-using a context for very long periods)
+clear_request_cache()
+```
+
+---
+
+## Error Handling
+
+PintGlass uses specific exceptions for conversion failures.
+
+| Exception Class             | Description                                                                 |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `UnsupportedDimensionError` | Raised when a requested dimension key (e.g., "magic_power") is unknown.     |
+| `UnitConversionError`       | Raised when Pint fails to convert units (e.g., incompatible dimensionality).|
+
+### Handling Validation Errors in Pydantic
+
+When using `PintGlass` fields, invalid inputs raise standard Pydantic `ValidationError`s wrapping the underlying PintGlass exception.
+
+```python
+try:
+    TankSpecification(pressure="invalid_string")
+except ValidationError as e:
+    print(e)
+    # 1 validation error for TankSpecification
+    # pressure
+    #   Cannot convert 'invalid_string' to a numeric value ...
+```
+
+---
+
 ## API Reference
 
-### Constants
+### `PintGlass`
 
-| Constant            | Description                                      |
-| ------------------- | ------------------------------------------------ |
-| `DEFAULT_SYSTEM`    | Default unit system (`"engg_si"`)                |
-| `BASE_SYSTEM`       | Base system for storage (`"si"`)                 |
-| `SUPPORTED_SYSTEMS` | Set of supported systems                         |
-| `TARGET_DIMENSIONS` | Dimension → unit mapping dict                    |
-| `ureg`              | Shared Pint UnitRegistry instance                |
+```python
+def PintGlass(dimension: str, model_type: Literal["Input", "Output"]) -> Any
+```
+Factory function to create an Annotated type for Pydantic fields.
+- **dimension**: Key from `TARGET_DIMENSIONS` (e.g., "pressure").
+- **model_type**:
+    - `"Input"`: Converts user units → SI base units.
+    - `"Output"`: Expects SI base units, serializes to user units.
+
+### Context Management
+
+#### `set_unit_system(system: str) -> Token`
+Sets the current unit system context. Returns a token to be used with `reset_unit_system`.
+
+#### `reset_unit_system(token: Token) -> None`
+Resets the unit system context to the state before `set_unit_system` was called.
+
+#### `get_unit_system() -> str`
+Returns the identifier of the current unit system (e.g., "engg_si"). Defaults to `DEFAULT_SYSTEM` if not set.
+
+### Conversion Utilities
+
+#### `convert_to_base(value: float, dimension: str, system: str) -> float`
+Converts a value from the specified system's unit to the SI base unit.
+
+#### `convert_from_base(value: float, dimension: str, system: str) -> float`
+Converts a value from the SI base unit to the specified system's unit.
+
+#### `get_preferred_unit(dimension: str, system: str) -> str`
+Returns the unit string (e.g., "psi") used for the given dimension in the specified system.
 
 ---
 
 ## Best Practices
 
 ### 1. Always Reset Context
+When using `set_unit_system`, always ensure `reset_unit_system` is called, preferably in a `finally` block or context manager logic.
 
 ```python
 token = set_unit_system("engg_field")
@@ -337,20 +381,18 @@ finally:
 ```
 
 ### 2. Use Middleware for Web Apps
+Do not set global state. Use middleware or dependency injection to set the unit system *per request* based on headers or user profile.
 
-```python
-@app.middleware("http")
-async def unit_middleware(request: Request, call_next):
-    token = set_unit_system(request.headers.get("X-Unit-System", "engg_si"))
-    try:
-        return await call_next(request)
-    finally:
-        reset_unit_system(token)
-```
+### 3. Store SI, Display User Units
+Always store physical quantities in SI base units (Kelvin, Pascal, Meter) in your database and business logic. Only convert to/from user units at the API boundary (Input/Output models). This avoids confusion and conversion errors in your core logic.
+
+### 4. Use "Input" vs "Output" Correctly
+- Use `PintGlass(..., "Input")` for models receiving data (POST/PUT bodies).
+- Use `PintGlass(..., "Output")` for models returning data (Response models).
+- Do not use `PintGlass` fields for internal data structures unless you specifically need auto-conversion there.
 
 ---
 
 ## License
 
 MIT License — see [LICENSE](./LICENSE) for details.
-
