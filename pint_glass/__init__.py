@@ -13,7 +13,6 @@ Key Features:
 """
 
 from pint_glass.context import (
-    DEFAULT_SYSTEM,
     SUPPORTED_SYSTEMS,
     clear_request_cache,
     get_request_cache,
@@ -30,7 +29,12 @@ from pint_glass.core import (
     get_preferred_unit,
     ureg,
 )
-from pint_glass.dimensions import TARGET_DIMENSIONS, UNIT_SYSTEMS
+from pint_glass.dimensions import (
+    BASE_SYSTEM,
+    DEFAULT_SYSTEM,
+    TARGET_DIMENSIONS,
+    UNIT_SYSTEMS,
+)
 from pint_glass.exceptions import (
     PintGlassError,
     UnitConversionError,
@@ -41,6 +45,7 @@ from pint_glass.fields import ModelType, PintGlass
 __version__ = "0.1.0"
 
 __all__ = [
+    "BASE_SYSTEM",
     "DEFAULT_SYSTEM",
     "SUPPORTED_SYSTEMS",
     "TARGET_DIMENSIONS",

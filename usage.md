@@ -41,10 +41,10 @@ PintGlass simplifies unit conversion in APIs by:
 ### How It Works
 
 ```
-┌─────────────────┐     PintGlass      ┌─────────────────┐     PintGlass       ┌─────────────────┐
-│   User Input    │  ──────────────►   │   Internal SI   │  ───────────────►   │  API Response   │
-│  (imperial/si)  │  (validation)      │   (base units)  │  (serialization)    │  (imperial/si)  │
-└─────────────────┘                    └─────────────────┘                     └─────────────────┘
+┌──────────────────┐     PintGlass      ┌─────────────────┐     PintGlass       ┌──────────────────┐
+│    User Input    │  ──────────────►   │   Internal SI   │  ───────────────►   │   API Response   │
+│ (engg_si/field)  │  (validation)      │   (base units)  │  (serialization)    │ (engg_si/field)  │
+└──────────────────┘                    └─────────────────┘                     └──────────────────┘
 ```
 
 ---
@@ -59,21 +59,21 @@ from pint_glass import PintGlass, set_unit_system
 
 # Define a model with unit-aware fields
 class TankSpecification(BaseModel):
-    pressure: PintGlass("pressure", "Input")       # psi ↔ pascals
-    height: PintGlass("length", "Input")           # feet ↔ meters
-    capacity: PintGlass("volume", "Input")         # cubic feet ↔ cubic meters
-    max_temperature: PintGlass("temperature", "Input")  # °F ↔ °C
+    pressure: PintGlass("pressure", "Input")       # bar ↔ pascals
+    height: PintGlass("length", "Input")           # meters ↔ meters
+    capacity: PintGlass("volume", "Input")         # cubic meters ↔ cubic meters
+    max_temperature: PintGlass("temperature", "Input")  # °C ↔ °C
 
 
-# Set the unit system context
-set_unit_system("imperial")
+# Set the unit system context (default is engg_si)
+set_unit_system("engg_si")
 
-# Create a model instance — values are in imperial units
+# Create a model instance — values are in engineering SI units
 tank = TankSpecification(
-    pressure=150,        # 150 psi → stored as ~1,034,213 Pa
-    height=10,           # 10 ft → stored as 3.048 m
-    capacity=500,        # 500 ft³ → stored as ~14.16 m³
-    max_temperature=200  # 200°F → stored as ~93.3°C
+    pressure=10,         # 10 bar → stored as 1,000,000 Pa
+    height=3,            # 3 m → stored as 3 m
+    capacity=14,         # 14 m³ → stored as 14 m³
+    max_temperature=93   # 93°C → stored as 93°C
 )
 
 # Access internal values (always SI)
@@ -82,7 +82,7 @@ print(f"Internal height: {tank.height} m")
 
 # Serialize back to user-preferred units
 print(tank.model_dump())
-# Output: {'pressure': 150.0, 'height': 10.0, 'capacity': 500.0, 'max_temperature': 200.0}
+# Output: {'pressure': 10.0, 'height': 3.0, 'capacity': 14.0, 'max_temperature': 93.0}
 ```
 
 ### Input vs Output Models
@@ -95,14 +95,14 @@ from pint_glass import PintGlass
 
 # Input Model: User sends preferred units → stored as SI
 class PipeRequest(BaseModel):
-    length: PintGlass("length", "Input")    # 10 ft → 3.048 m
-    pressure: PintGlass("pressure", "Input")
+    length: PintGlass("length", "Input")    # 10 m → 10 m
+    pressure: PintGlass("pressure", "Input") # 10 bar → 1,000,000 Pa
 
 
 # Output Model: SI values → serialized to preferred units
 class PipeResponse(BaseModel):
-    length: PintGlass("length", "Output")    # 3.048 m → 10 ft
-    pressure: PintGlass("pressure", "Output")
+    length: PintGlass("length", "Output")    # 10 m → 10 m
+    pressure: PintGlass("pressure", "Output") # 1,000,000 Pa → 10 bar
 ```
 
 **Key Difference:**
@@ -127,8 +127,8 @@ app = FastAPI()
 # Middleware to set unit system from request header
 @app.middleware("http")
 async def unit_system_middleware(request: Request, call_next):
-    # Read unit system from X-Unit-System header (default: imperial)
-    system = request.headers.get("X-Unit-System", "imperial").lower()
+    # Read unit system from X-Unit-System header (default: engg_si)
+    system = request.headers.get("X-Unit-System", "engg_si").lower()
 
     # Set context for this request
     token = set_unit_system(system)
@@ -155,10 +155,11 @@ class PumpResponse(BaseModel):
 @app.post("/pumps/calculate", response_model=PumpResponse)
 async def calculate_pump(request: PumpRequest):
     # Business logic works with SI units internally
+    # Flow rate is converted from m³/hr (engg_si) to m³/s (SI base)
     print(f"Flow rate (m³/s): {request.flow_rate}")
     print(f"Pressure (Pa): {request.head_pressure}")
 
-    # Return response — automatically converted to user's preferred units
+    # Return response — automatically converted back to engg_si (m³/hr, bar)
     return PumpResponse(
         flow_rate=request.flow_rate,
         head_pressure=request.head_pressure,
@@ -169,22 +170,23 @@ async def calculate_pump(request: PumpRequest):
 ### Making Requests
 
 ```bash
-# Imperial units (default)
+# Engineering SI units (default)
 curl -X POST "http://localhost:8000/pumps/calculate" \
   -H "Content-Type: application/json" \
-  -H "X-Unit-System: imperial" \
+  -H "X-Unit-System: engg_si" \
+  -d '{"flow_rate": 360, "head_pressure": 1.0}'
+
+# Response: {"flow_rate": 360.0, "head_pressure": 1.0, "status": "calculated"}
+# (Note: flow_rate 360 m³/hr = 0.1 m³/s internally)
+
+
+# Engineering Field units
+curl -X POST "http://localhost:8000/pumps/calculate" \
+  -H "Content-Type: application/json" \
+  -H "X-Unit-System: engg_field" \
   -d '{"flow_rate": 100, "head_pressure": 50}'
 
 # Response: {"flow_rate": 100.0, "head_pressure": 50.0, "status": "calculated"}
-
-
-# SI units
-curl -X POST "http://localhost:8000/pumps/calculate" \
-  -H "Content-Type: application/json" \
-  -H "X-Unit-System: si" \
-  -d '{"flow_rate": 2.83, "head_pressure": 344737.86}'
-
-# Response: {"flow_rate": 2.83, "head_pressure": 344737.86, "status": "calculated"}
 ```
 
 ### Dependency Injection Alternative
@@ -199,7 +201,7 @@ app = FastAPI()
 
 async def get_unit_system(x_unit_system: Annotated[str | None, Header()] = None):
     """Dependency to manage unit system context."""
-    system = (x_unit_system or "imperial").lower()
+    system = (x_unit_system or "engg_si").lower()
     token = set_unit_system(system)
     try:
         yield system
@@ -220,48 +222,25 @@ async def create_item(
 
 ## Supported Dimensions
 
-PintGlass supports 21 physical dimensions out of the box:
+PintGlass supports multiple engineering and standard unit systems:
 
-| Dimension              | Imperial Unit       | SI Unit               | CGS Unit               |
-| ---------------------- | ------------------- | --------------------- | ---------------------- |
-| `pressure`             | psi                 | pascal                | barye                  |
-| `length`               | foot                | meter                 | centimeter             |
-| `temperature`          | degF                | degC                  | degC                   |
-| `mass`                 | pound               | kilogram              | gram                   |
-| `time`                 | second              | second                | second                 |
-| `current`              | ampere              | ampere                | ampere                 |
-| `luminosity`           | candela             | candela               | candela                |
-| `substance`            | mole                | mole                  | mole                   |
-| `area`                 | square_foot         | meter²                | centimeter²            |
-| `volume`               | cubic_foot          | meter³                | centimeter³            |
-| `frequency`            | hertz               | hertz                 | hertz                  |
-| `wavenumber`           | 1/foot              | 1/meter               | 1/centimeter           |
-| `velocity`             | foot/second         | meter/second          | centimeter/second      |
-| `speed`                | foot/second         | meter/second          | centimeter/second      |
-| `volumetric_flow_rate` | cubic_foot/second   | meter³/second         | centimeter³/second     |
-| `acceleration`         | foot/second²        | meter/second²         | centimeter/second²     |
-| `force`                | pound_force         | newton                | dyne                   |
-| `energy`               | foot_pound          | joule                 | erg                    |
-| `power`                | foot_pound/second   | watt                  | erg/second             |
-| `momentum`             | pound·foot/second   | kilogram·meter/second | gram·centimeter/second |
-| `density`              | pound/cubic_foot    | kilogram/meter³       | gram/centimeter³       |
-| `torque`               | foot_pound          | newton·meter          | dyne·centimeter        |
-| `viscosity`            | pound/(foot·second) | pascal·second         | poise                  |
-| `kinematic_viscosity`  | square_foot/second  | meter²/second         | stokes                 |
-
-### Accessing Dimension Configuration
-
-```python
-from pint_glass import TARGET_DIMENSIONS
-
-# List all supported dimensions
-print(list(TARGET_DIMENSIONS.keys()))
-# ['pressure', 'length', 'temperature', 'mass', 'time', ...]
-
-# Get units for a specific dimension
-print(TARGET_DIMENSIONS["pressure"])
-# {'imperial': 'psi', 'si': 'pascal', 'cgs': 'barye', 'us': 'psi'}
-```
+| Dimension              | Engg SI (default) | Engg Field          | Imperial Unit       | SI Unit               |
+| ---------------------- | ----------------- | ------------------- | ------------------- | --------------------- |
+| `pressure`             | bar               | psi                 | psi                 | pascal                |
+| `length`               | meter             | foot                | foot                | meter                 |
+| `temperature`          | degC              | degF                | degF                | degC                  |
+| `mass_flow_rate`       | kg/hr             | lb/hr               | lb/s                | kg/s                  |
+| `volumetric_flow_rate` | m³/hr             | ft³/hr              | ft³/s               | m³/s                  |
+| `mass`                 | kilogram          | pound               | pound               | kilogram              |
+| `time`                 | second            | second              | second              | second                |
+| `area`                 | meter²            | foot²               | foot²               | meter²                |
+| `volume`               | meter³            | foot³               | foot³               | meter³                |
+| `velocity`             | meter/second      | foot/second         | foot/second         | meter/second          |
+| `force`                | newton            | pound_force         | pound_force         | newton                |
+| `energy`               | joule             | foot_pound          | foot_pound          | joule                 |
+| `power`                | watt              | foot_pound/second   | foot_pound/second   | watt                  |
+| `density`              | kg/m³             | lb/ft³              | lb/ft³              | kg/m³                 |
+| `viscosity`            | pascal·second     | pound/(foot·second) | pound/(foot·second) | pascal·second         |
 
 ---
 
@@ -269,12 +248,14 @@ print(TARGET_DIMENSIONS["pressure"])
 
 ### Supported Systems
 
-| System     | Description                                    |
-| ---------- | ---------------------------------------------- |
-| `imperial` | British Imperial / US Customary (default)      |
-| `si`       | International System of Units (metric)         |
-| `cgs`      | Centimeter-Gram-Second system                  |
-| `us`       | US Customary (same as imperial for most units) |
+| System       | Description                                              |
+| ------------ | -------------------------------------------------------- |
+| `engg_si`    | Engineering SI: bar, m³/hr, kg/hr, degC (default)        |
+| `engg_field` | Engineering Field: psi, ft³/hr, lb/hr, degF              |
+| `imperial`   | British Imperial / US Customary (psi, ft³/s, lb/s, degF) |
+| `si`         | International System of Units (metric base units)        |
+| `cgs`        | Centimeter-Gram-Second system                            |
+| `us`         | US Customary                                             |
 
 ### Setting Unit System
 
@@ -282,17 +263,17 @@ print(TARGET_DIMENSIONS["pressure"])
 from pint_glass import set_unit_system, get_unit_system, reset_unit_system
 
 # Set unit system (returns a token for reset)
-token = set_unit_system("si")
-print(get_unit_system())  # 'si'
+token = set_unit_system("engg_field")
+print(get_unit_system())  # 'engg_field'
 
 # Reset to previous value
 reset_unit_system(token)
-print(get_unit_system())  # 'imperial' (default)
+print(get_unit_system())  # 'engg_si' (default)
 ```
 
 ### Invalid System Handling
 
-When an unsupported unit system is provided, PintGlass warns and falls back to `imperial`:
+When an unsupported unit system is provided, PintGlass warns and falls back to `engg_si`:
 
 ```python
 import warnings
@@ -304,8 +285,8 @@ with warnings.catch_warnings(record=True) as w:
     set_unit_system("metric")  # 'metric' is not supported
 
     print(w[-1].message)
-    # "Unknown unit system 'metric' — falling back to 'imperial'.
-    #  Supported systems: ['imperial', 'si']. Did you mean 'si'?"
+    # "Unknown unit system 'metric' — falling back to 'engg_si'.
+    #  Supported systems: ['engg_si', 'engg_field', 'imperial', 'si', ...]"
 ```
 
 ---
@@ -314,176 +295,31 @@ with warnings.catch_warnings(record=True) as w:
 
 ### Direct Conversion Functions
 
-For cases where you need conversions outside Pydantic models:
-
 ```python
 from pint_glass import convert_to_base, convert_from_base, get_preferred_unit, get_base_unit
 
-# Convert 100 psi to pascals
-pressure_pa = convert_to_base(100, "pressure", "imperial")
-print(f"100 psi = {pressure_pa:.2f} Pa")  # ~689475.73 Pa
+# Convert 10 bar to pascals
+pressure_pa = convert_to_base(10, "pressure", "engg_si")
+print(f"10 bar = {pressure_pa:.2f} Pa")  # 1,000,000.00 Pa
 
-# Convert 101325 Pa to psi
-pressure_psi = convert_from_base(101325, "pressure", "imperial")
-print(f"101325 Pa = {pressure_psi:.2f} psi")  # ~14.70 psi
-
-# Get unit strings
-print(get_preferred_unit("length", "imperial"))  # 'foot'
-print(get_base_unit("length"))                    # 'meter'
-```
-
-### Accessing the Pint UnitRegistry
-
-```python
-from pint_glass import ureg
-
-# Create Pint quantities directly
-length = ureg.Quantity(10, "foot")
-print(length.to("meter"))  # 3.048 meter
-
-# Perform calculations
-area = length * ureg.Quantity(5, "foot")
-print(area)  # 50 foot ** 2
-```
-
-### Request-Scoped Caching
-
-PintGlass caches conversions per-request to avoid redundant Pint computations:
-
-```python
-from pint_glass import get_request_cache, clear_request_cache
-
-# Access current cache
-cache = get_request_cache()
-print(f"Cache size: {len(cache)}")
-
-# Clear cache (recommended at request start in middleware)
-token = clear_request_cache()
-# ... handle request ...
-```
-
-### Complete FastAPI Example with Caching
-
-```python
-from fastapi import FastAPI, Request
-from pint_glass import set_unit_system, reset_unit_system, clear_request_cache
-
-app = FastAPI()
-
-
-@app.middleware("http")
-async def unit_context_middleware(request: Request, call_next):
-    """Full middleware with unit system and cache management."""
-    system = request.headers.get("X-Unit-System", "imperial").lower()
-
-    # Clear cache for fresh request
-    cache_token = clear_request_cache()
-
-    # Set unit system
-    system_token = set_unit_system(system)
-
-    try:
-        response = await call_next(request)
-        return response
-    finally:
-        reset_unit_system(system_token)
-        # Cache automatically cleared on context exit
-```
-
----
-
-## Error Handling
-
-### Exception Types
-
-```python
-from pint_glass import PintGlassError, UnsupportedDimensionError, UnitConversionError
-
-# Base exception for all PintGlass errors
-try:
-    # Some operation
-    pass
-except PintGlassError as e:
-    print(f"PintGlass error: {e}")
-
-
-# Unsupported dimension
-try:
-    from pint_glass import get_preferred_unit
-    get_preferred_unit("unknown_dimension", "imperial")
-except UnsupportedDimensionError as e:
-    print(f"Dimension error: {e}")
-    # "Unsupported dimension 'unknown_dimension'; supported: 'pressure', 'length', ..."
-
-
-# Unit conversion failure
-try:
-    from pint_glass import convert_to_base
-    # This would fail with incompatible units
-    convert_to_base(100, "pressure", "imperial")  # Normal case works
-except UnitConversionError as e:
-    print(f"Conversion error: {e}")
-```
-
-### Handling Validation Errors in Pydantic
-
-```python
-from pydantic import BaseModel, ValidationError
-from pint_glass import PintGlass, set_unit_system
-
-class Measurement(BaseModel):
-    value: PintGlass("pressure")
-
-set_unit_system("imperial")
-
-# Invalid input type
-try:
-    m = Measurement(value="not a number")
-except ValidationError as e:
-    print(e)
-    # 1 validation error for Measurement
-    # value
-    #   Cannot convert 'not a number' to a numeric value
+# Convert 3600 m³/hr to m³/s
+flow_m3s = convert_to_base(3600, "volumetric_flow_rate", "engg_si")
+print(f"3600 m3/hr = {flow_m3s:.2f} m3/s")  # 1.00 m3/s
 ```
 
 ---
 
 ## API Reference
 
-### Primary API
-
-| Function                           | Description                   |
-| ---------------------------------- | ----------------------------- |
-| `PintGlass(dimension, model_type)` | Create annotated field type   |
-| `set_unit_system(system)`          | Set unit system context       |
-| `get_unit_system()`                | Get current unit system       |
-| `reset_unit_system(token)`         | Reset to previous unit system |
-
-### Conversion Functions
-
-| Function                                      | Description                |
-| --------------------------------------------- | -------------------------- |
-| `convert_to_base(value, dimension, system)`   | Convert to SI base units   |
-| `convert_from_base(value, dimension, system)` | Convert from SI base units |
-| `get_preferred_unit(dimension, system)`       | Get unit string for system |
-| `get_base_unit(dimension)`                    | Get SI base unit string    |
-
-### Cache Management
-
-| Function                   | Description               |
-| -------------------------- | ------------------------- |
-| `get_request_cache()`      | Get current request cache |
-| `set_request_cache(cache)` | Set request cache         |
-| `clear_request_cache()`    | Clear/reset request cache |
-
 ### Constants
 
-| Constant            | Description                                     |
-| ------------------- | ----------------------------------------------- |
-| `DEFAULT_SYSTEM`    | Default unit system (`"imperial"`)              |
-| `SUPPORTED_SYSTEMS` | Set of supported systems (`{"imperial", "si"}`) |
-| `TARGET_DIMENSIONS` | Dimension → unit mapping dict                   |
-| `ureg`              | Shared Pint UnitRegistry instance               |
+| Constant            | Description                                      |
+| ------------------- | ------------------------------------------------ |
+| `DEFAULT_SYSTEM`    | Default unit system (`"engg_si"`)                |
+| `BASE_SYSTEM`       | Base system for storage (`"si"`)                 |
+| `SUPPORTED_SYSTEMS` | Set of supported systems                         |
+| `TARGET_DIMENSIONS` | Dimension → unit mapping dict                    |
+| `ureg`              | Shared Pint UnitRegistry instance                |
 
 ---
 
@@ -492,7 +328,7 @@ except ValidationError as e:
 ### 1. Always Reset Context
 
 ```python
-token = set_unit_system("si")
+token = set_unit_system("engg_field")
 try:
     # Your code here
     pass
@@ -502,111 +338,14 @@ finally:
 
 ### 2. Use Middleware for Web Apps
 
-Middleware ensures consistent context for the entire request lifecycle:
-
 ```python
 @app.middleware("http")
 async def unit_middleware(request: Request, call_next):
-    token = set_unit_system(request.headers.get("X-Unit-System", "imperial"))
+    token = set_unit_system(request.headers.get("X-Unit-System", "engg_si"))
     try:
         return await call_next(request)
     finally:
         reset_unit_system(token)
-```
-
-### 3. Separate Input and Output Models
-
-```python
-# Clear intent and proper conversion direction
-class ItemInput(BaseModel):
-    value: PintGlass("length", "Input")
-
-class ItemOutput(BaseModel):
-    value: PintGlass("length", "Output")
-```
-
-### 4. Validate Unit System Header
-
-```python
-from pint_glass import SUPPORTED_SYSTEMS
-
-def validate_unit_system(system: str) -> str:
-    system = system.lower()
-    if system not in SUPPORTED_SYSTEMS:
-        raise ValueError(f"Unsupported unit system: {system}")
-    return system
-```
-
-### 5. Work in SI Internally
-
-All business logic should work with SI units. PintGlass handles conversion at the API boundary:
-
-```python
-@app.post("/calculate")
-async def calculate(data: InputModel) -> OutputModel:
-    # data.pressure is already in pascals
-    # data.length is already in meters
-
-    result = complex_calculation(data.pressure, data.length)  # SI units
-
-    # Return OutputModel — converts back to user units automatically
-    return OutputModel(result=result)
-```
-
----
-
-## Examples Repository
-
-For complete working examples, see:
-
-- [`fast_api_check.py`](./fast_api_check.py) - Full FastAPI integration example
-- [`tests/`](./tests/) - Unit tests demonstrating various use cases
-
----
-
-## Troubleshooting
-
-### "No conversion found" Error
-
-Ensure the dimension string matches exactly:
-
-```python
-# ❌ Wrong
-PintGlass("Pressure", "Input")  # Case-sensitive!
-
-# ✅ Correct
-PintGlass("pressure", "Input")
-```
-
-### Values Not Converting
-
-Check that unit system is set before model creation:
-
-```python
-# ❌ Unit system set after model creation
-model = MyModel(value=100)
-set_unit_system("si")  # Too late!
-
-# ✅ Set unit system first
-set_unit_system("si")
-model = MyModel(value=100)
-```
-
-### Async Context Issues
-
-Ensure you're using the token pattern correctly:
-
-```python
-# ❌ Context may not propagate correctly
-set_unit_system("si")
-await some_async_operation()
-
-# ✅ Use token and reset
-token = set_unit_system("si")
-try:
-    await some_async_operation()
-finally:
-    reset_unit_system(token)
 ```
 
 ---
@@ -614,3 +353,4 @@ finally:
 ## License
 
 MIT License — see [LICENSE](./LICENSE) for details.
+

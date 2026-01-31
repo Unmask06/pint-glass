@@ -10,15 +10,15 @@ from __future__ import annotations
 import pint
 
 from pint_glass.context import get_request_cache
-from pint_glass.dimensions import TARGET_DIMENSIONS
+from pint_glass.dimensions import (
+    BASE_SYSTEM,
+    DEFAULT_SYSTEM,
+    TARGET_DIMENSIONS,
+)
 from pint_glass.exceptions import UnitConversionError, UnsupportedDimensionError
 
 # Singleton UnitRegistry instance
 ureg: pint.UnitRegistry = pint.UnitRegistry()  # type: ignore[type-arg]
-
-
-# Base units are always SI
-BASE_SYSTEM: str = "si"
 
 
 def get_preferred_unit(dimension: str, system: str) -> str:
@@ -45,8 +45,8 @@ def get_preferred_unit(dimension: str, system: str) -> str:
     dim_units = TARGET_DIMENSIONS[dimension]
 
     if system_lower not in dim_units:
-        # Fallback to imperial if system not recognized
-        system_lower = "imperial"
+        # Fallback to default if system not recognized
+        system_lower = DEFAULT_SYSTEM
 
     return dim_units[system_lower]
 

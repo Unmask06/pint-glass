@@ -3,7 +3,7 @@
 import pytest
 
 from pint_glass.core import ureg
-from pint_glass.dimensions import TARGET_DIMENSIONS
+from pint_glass.dimensions import TARGET_DIMENSIONS, UNIT_SYSTEMS
 
 
 class TestTargetDimensionsStructure:
@@ -11,7 +11,7 @@ class TestTargetDimensionsStructure:
 
     def test_all_dimensions_have_required_systems(self) -> None:
         """All dimensions should have imperial, si, cgs, and us systems."""
-        required_systems = {"imperial", "si", "cgs", "us"}
+        required_systems = set(UNIT_SYSTEMS)
         for dimension, systems in TARGET_DIMENSIONS.items():
             assert set(systems.keys()) == required_systems, (
                 f"Dimension '{dimension}' missing required systems. "

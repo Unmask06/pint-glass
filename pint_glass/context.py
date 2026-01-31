@@ -9,16 +9,13 @@ from __future__ import annotations
 import warnings
 from contextvars import ContextVar, Token
 
-from pint_glass.dimensions import UNIT_SYSTEMS
+from pint_glass.dimensions import DEFAULT_SYSTEM, UNIT_SYSTEMS
 
 # Re-export for backward compatibility
 SUPPORTED_SYSTEMS: frozenset[str] = UNIT_SYSTEMS
 
-# Default unit system (can be configured at app startup)
-DEFAULT_SYSTEM: str = "imperial"
-
 # Context variable holding the current unit system
-# Default is "imperial" as per spec
+# Default is fetched from dimensions.py
 unit_context: ContextVar[str] = ContextVar("unit_context", default=DEFAULT_SYSTEM)
 
 # Request-scoped cache for unit conversions (avoids redundant Pint computations)

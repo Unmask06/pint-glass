@@ -9,7 +9,7 @@ from pint_glass.core import (
     get_preferred_unit,
     ureg,
 )
-from pint_glass.dimensions import TARGET_DIMENSIONS
+from pint_glass.dimensions import DEFAULT_SYSTEM, TARGET_DIMENSIONS
 from pint_glass.exceptions import UnitConversionError, UnsupportedDimensionError
 
 
@@ -67,10 +67,11 @@ class TestGetPreferredUnit:
         ):
             get_preferred_unit("unknown", "imperial")
 
-    def test_unknown_system_falls_back_to_imperial(self) -> None:
-        """Unknown system should fall back to imperial."""
+    def test_unknown_system_falls_back_to_default(self) -> None:
+        """Unknown system should fall back to default."""
         result = get_preferred_unit("pressure", "unknown_system")
-        assert result == "psi"
+        expected = TARGET_DIMENSIONS["pressure"][DEFAULT_SYSTEM]
+        assert result == expected
 
 
 class TestGetBaseUnit:
