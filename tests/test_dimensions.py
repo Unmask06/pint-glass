@@ -3,7 +3,7 @@
 import pytest
 
 from pint_glass.core import ureg
-from pint_glass.dimensions import TARGET_DIMENSIONS
+from pint_glass.dimensions import TARGET_DIMENSIONS, UNIT_SYSTEMS
 
 
 class TestTargetDimensionsStructure:
@@ -11,7 +11,7 @@ class TestTargetDimensionsStructure:
 
     def test_all_dimensions_have_required_systems(self) -> None:
         """All dimensions should have imperial, si, cgs, and us systems."""
-        required_systems = {"imperial", "si", "cgs", "us"}
+        required_systems = set(UNIT_SYSTEMS)
         for dimension, systems in TARGET_DIMENSIONS.items():
             assert set(systems.keys()) == required_systems, (
                 f"Dimension '{dimension}' missing required systems. "
@@ -58,16 +58,16 @@ class TestTargetDimensionsStructure:
     def test_common_dimensions_present(self) -> None:
         """Common physical dimensions should be present."""
         expected_dimensions = {
-            "pressure",
-            "length",
-            "temperature",
-            "mass",
-            "time",
-            "area",
-            "volume",
-            "velocity",
-            "force",
-            "energy",
+            "Pressure",
+            "Length",
+            "Temperature",
+            "Mass",
+            "Time",
+            "Area",
+            "Volume",
+            "Velocity",
+            "Force",
+            "Energy",
         }
         actual_dimensions = set(TARGET_DIMENSIONS.keys())
         missing = expected_dimensions - actual_dimensions
@@ -75,9 +75,10 @@ class TestTargetDimensionsStructure:
 
     def test_temperature_handling(self) -> None:
         """Temperature dimensions should use degree units appropriately."""
-        temp_units = TARGET_DIMENSIONS["temperature"]
-        # Check that temperature uses degF and degC
-        assert temp_units["imperial"] == "degF"
-        assert temp_units["us"] == "degF"
-        assert temp_units["si"] == "degC"
-        assert temp_units["cgs"] == "degC"
+        temp_units = TARGET_DIMENSIONS["Temperature"]
+        # Check that temperature uses degF and degC (pretty versions)
+        # Note: ~P formatting: degF -> °F, degC -> °C
+        assert temp_units["imperial"] == "°F"
+        assert temp_units["us"] == "°F"
+        assert temp_units["si"] == "K"
+        assert temp_units["cgs"] == "°C"

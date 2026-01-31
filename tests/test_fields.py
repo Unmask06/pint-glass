@@ -74,13 +74,13 @@ class TestPintGlassInputModel:
             class TestModel(BaseModel):
                 temp: PintGlass("temperature", "Input")
 
-            # 32°F = 0°C
+            # 32°F = 273.15 K
             model = TestModel(temp=32)
-            assert abs(model.temp - 0) < 0.1
+            assert abs(model.temp - 273.15) < 0.1
 
-            # 212°F = 100°C
+            # 212°F = 373.15 K
             model2 = TestModel(temp=212)
-            assert abs(model2.temp - 100) < 0.1
+            assert abs(model2.temp - 373.15) < 0.1
         finally:
             unit_context.reset(token)
 
@@ -156,8 +156,8 @@ class TestPintGlassOutputModel:
             class ResponseModel(BaseModel):
                 temp: PintGlass("temperature", "Output")
 
-            # Store 100°C, serialize to 212°F
-            model = ResponseModel(temp=100)
+            # Store 373.15 K (100°C), serialize to 212°F
+            model = ResponseModel(temp=373.15)
             dumped = model.model_dump()
             assert abs(dumped["temp"] - 212) < 0.1
         finally:
@@ -406,7 +406,7 @@ class TestMultiplePintGlassFields:
             # Check internal SI values
             assert equip.max_pressure > 100  # pascals > psi value
             assert abs(equip.pipe_length - 3.048) < 0.001  # meters
-            assert abs(equip.max_temp - 100) < 0.1  # °C
+            assert abs(equip.max_temp - 373.15) < 0.1  # K
 
             # Check serialization returns imperial
             dumped = equip.model_dump()
@@ -429,7 +429,7 @@ class TestMultiplePintGlassFields:
             results = Results(
                 pressure=689476,  # pascals (100 psi)
                 length=3.048,  # meters (10 ft)
-                temperature=100,  # °C (212°F)
+                temperature=373.15,  # K (212°F)
             )
 
             dumped = results.model_dump()

@@ -6,14 +6,15 @@ from pint_glass.context import (
     set_unit_system,
     unit_context,
 )
+from pint_glass.dimensions import DEFAULT_SYSTEM
 
 
 class TestUnitContext:
     """Tests for unit_context ContextVar."""
 
-    def test_default_value_is_imperial(self) -> None:
-        """Default context value should be 'imperial'."""
-        assert unit_context.get() == "imperial"
+    def test_default_value_is_correct(self) -> None:
+        """Default context value should be the DEFAULT_SYSTEM."""
+        assert unit_context.get() == DEFAULT_SYSTEM
 
     def test_set_and_get(self) -> None:
         """Setting context should update the value."""
@@ -42,10 +43,10 @@ class TestGetUnitSystem:
         finally:
             unit_context.reset(token)
 
-    def test_returns_imperial_by_default(self) -> None:
-        """Should return imperial when no context set."""
+    def test_returns_default_by_default(self) -> None:
+        """Should return default system when no context set."""
         result = get_unit_system()
-        assert result == "imperial"
+        assert result == DEFAULT_SYSTEM
 
 
 class TestSetUnitSystem:
@@ -68,9 +69,9 @@ class TestSetUnitSystem:
     def test_multiple_sets(self) -> None:
         """Multiple sets should each return valid tokens."""
         token1 = set_unit_system("si")
-        token2 = set_unit_system("imperial")
+        token2 = set_unit_system("us")
 
-        assert unit_context.get() == "imperial"
+        assert unit_context.get() == "us"
         unit_context.reset(token2)
         assert unit_context.get() == "si"
         unit_context.reset(token1)
@@ -91,4 +92,4 @@ class TestResetUnitSystem:
         token = set_unit_system("si")
         assert get_unit_system() == "si"
         reset_unit_system(token)
-        assert get_unit_system() == "imperial"
+        assert get_unit_system() == DEFAULT_SYSTEM

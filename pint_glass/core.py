@@ -10,15 +10,15 @@ from __future__ import annotations
 import pint
 
 from pint_glass.context import get_request_cache
-from pint_glass.dimensions import TARGET_DIMENSIONS
+from pint_glass.dimensions import (
+    BASE_SYSTEM,
+    DEFAULT_SYSTEM,
+    _TARGET_DIMENSIONS_RAW as TARGET_DIMENSIONS,
+)
 from pint_glass.exceptions import UnitConversionError, UnsupportedDimensionError
 
 # Singleton UnitRegistry instance
 ureg: pint.UnitRegistry = pint.UnitRegistry()  # type: ignore[type-arg]
-
-
-# Base units are always SI
-BASE_SYSTEM: str = "si"
 
 
 def get_preferred_unit(dimension: str, system: str) -> str:
@@ -35,18 +35,21 @@ def get_preferred_unit(dimension: str, system: str) -> str:
         KeyError: If the dimension is not supported.
         KeyError: If the system is not supported for this dimension.
     """
-    if dimension not in TARGET_DIMENSIONS:
+    # Normalize dimension: "Temperature" -> "temperature", "Mass Flow Rate" -> "mass_flow_rate"
+    dim_normalized = dimension.lower().replace(" ", "_")
+
+    if dim_normalized not in TARGET_DIMENSIONS:
         supported = ", ".join(f"'{d}'" for d in TARGET_DIMENSIONS.keys())
         raise UnsupportedDimensionError(
             f"Unsupported dimension '{dimension}'; supported: {supported}"
         )
 
     system_lower = system.lower()
-    dim_units = TARGET_DIMENSIONS[dimension]
+    dim_units = TARGET_DIMENSIONS[dim_normalized]
 
     if system_lower not in dim_units:
-        # Fallback to imperial if system not recognized
-        system_lower = "imperial"
+        # Fallback to default if system not recognized
+        system_lower = DEFAULT_SYSTEM
 
     return dim_units[system_lower]
 
