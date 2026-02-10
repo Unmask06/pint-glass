@@ -39,16 +39,10 @@ class UnitMapping(TypedDict):
 UNIT_SYSTEMS: frozenset[str] = frozenset(get_type_hints(UnitMapping).keys())
 
 
-
-
-
 # Default unit system to use when none is specified or recognized
 
 
 DEFAULT_SYSTEM: str = "engg_si"
-
-
-
 
 
 # Base unit system used for internal storage and conversions (usually SI)
@@ -75,6 +69,14 @@ _TARGET_DIMENSIONS_RAW: dict[str, UnitMapping] = {
         "us": "foot",
         "engg_si": "meter",
         "engg_field": "foot",
+    },
+    "small_length": {
+        "imperial": "inch",
+        "si": "millimeter",
+        "cgs": "millimeter",
+        "us": "inch",
+        "engg_si": "millimeter",
+        "engg_field": "inch",
     },
     "temperature": {
         "imperial": "degF",
@@ -272,10 +274,11 @@ def get_pretty_dimensions() -> dict[str, dict[str, str]]:
         - Unit strings formatted to be human-readable (e.g., "m**2" -> "m²")
     """
     import warnings
+
     import pint
 
     # Create a local registry to avoid side effects or circular imports
-    ureg = pint.UnitRegistry()
+    ureg: pint.UnitRegistry = pint.UnitRegistry()
 
     pretty_dims = {}
     for dim_key, unit_map in _TARGET_DIMENSIONS_RAW.items():
@@ -300,7 +303,7 @@ def get_pretty_dimensions() -> dict[str, dict[str, str]]:
                     stacklevel=2,
                 )
                 pretty_map[system] = unit_str
-        
+
         pretty_dims[pretty_key] = pretty_map
 
     return pretty_dims
