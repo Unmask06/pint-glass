@@ -6,7 +6,7 @@ annotated types with automatic unit conversion based on context.
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import BeforeValidator, PlainSerializer
 
@@ -18,8 +18,13 @@ from pint_glass.exceptions import UnitConversionError, UnsupportedDimensionError
 ModelType = Literal["Input", "Output"]
 
 
-def PintGlass(dimension: str, model_type: ModelType) -> Any:  # noqa: N802
-    """Create an annotated type for a Pydantic field with automatic unit conversion.
+if TYPE_CHECKING:
+    """Type checker sees this: PintGlass returns a type that's compatible with float."""
+    def PintGlass(dimension: str, model_type: ModelType) -> type[float]: ...  # noqa: F811
+else:
+
+    def PintGlass(dimension: str, model_type: ModelType) -> Any:  # noqa: N802
+        """Create an annotated type for a Pydantic field with automatic unit conversion.
 
     This factory function returns an `Annotated[float, ...]` type that converts
     between the user's preferred unit system and SI base units.
@@ -60,10 +65,10 @@ def PintGlass(dimension: str, model_type: ModelType) -> Any:  # noqa: N802
         validation/serialization, making this suitable for per-request
         unit system handling in async frameworks like FastAPI.
     """
-    if model_type == "Input":
-        return _create_input_type(dimension)
-    else:
-        return _create_output_type(dimension)
+        if model_type == "Input":
+            return _create_input_type(dimension)
+        else:
+            return _create_output_type(dimension)
 
 
 def _create_input_type(dimension: str) -> Any:
