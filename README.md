@@ -57,6 +57,36 @@ async def set_unit_context(request: Request, call_next):
     return response
 ```
 
+## CLI Usage
+
+PintGlass provides a CLI utility to help synchronize unit definitions with frontend applications or other external tools.
+
+### Exporting Unit Configuration
+
+To export the current unit system mappings and dimension labels to a JSON file:
+
+```bash
+pint-glass export --output units.json
+```
+
+If the `--output` flag is omitted, the JSON will be printed to stdout.
+
+### Frontend Synchronization Example
+
+In a web application (e.g., Vue, React, or Angular), you can add a script to your `package.json` to ensure your frontend always uses the latest unit definitions from your Python backend:
+
+```json
+{
+  "scripts": {
+    "sync-units": "pint-glass export --output src/api/unit-defaults.json",
+    "dev": "npm run sync-units && vite",
+    "build": "npm run sync-units && vite build"
+  }
+}
+```
+
+This allows your UI to render instantly with correct unit labels before the backend API even responds.
+
 ## Supported Dimensions
 
 PintGlass supports multiple unit systems including **Engineering SI** (`engg_si`), **Engineering Field** (`engg_field`), **Imperial** (`imperial`), **SI** (`si`), **CGS** (`cgs`), and **US Customary** (`us`).

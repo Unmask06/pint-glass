@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pint-glass"
-version = "0.3.0"
+version = "0.4.0"
 description = "A Pydantic + Pint integration library for seamless unit conversion in Python APIs"
 readme = "README.md"
 license = "MIT"
@@ -23,6 +23,9 @@ classifiers = [
 ]
 
 dependencies = ["pint>=0.23", "pydantic>=2.0", "fastapi>=0.100", "uvicorn>=0.20"]
+
+[project.scripts]
+pint-glass = "pint_glass.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "ruff>=0.4", "mypy>=1.10"]

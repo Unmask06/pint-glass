@@ -34,6 +34,7 @@ from pint_glass.dimensions import (
     DEFAULT_SYSTEM,
     TARGET_DIMENSIONS,
     UNIT_SYSTEMS,
+    export_dimensions,
 )
 from pint_glass.exceptions import (
     PintGlassError,
@@ -50,6 +51,7 @@ __all__ = [
     "SUPPORTED_SYSTEMS",
     "TARGET_DIMENSIONS",
     "UNIT_SYSTEMS",
+    "export_dimensions",
     "ModelType",
     # Primary API
     "PintGlass",

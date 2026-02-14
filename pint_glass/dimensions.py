@@ -310,3 +310,29 @@ def get_pretty_dimensions() -> dict[str, dict[str, str]]:
 
 
 TARGET_DIMENSIONS: dict[str, dict[str, str]] = get_pretty_dimensions()
+
+
+def export_dimensions(output_path: str | None = None) -> str:
+    """Export the unit configuration to a JSON string or file.
+
+    Args:
+        output_path: Path to write the JSON to. If None, returns the JSON string.
+
+    Returns:
+        The JSON string representation of the configuration.
+    """
+    import json
+
+    config = {
+        "systems": sorted(list(UNIT_SYSTEMS)),
+        "dimensions": {
+            dim.lower(): systems for dim, systems in TARGET_DIMENSIONS.items()
+        },
+    }
+    json_str = json.dumps(config, indent=2, ensure_ascii=False)
+
+    if output_path:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(json_str)
+
+    return json_str
